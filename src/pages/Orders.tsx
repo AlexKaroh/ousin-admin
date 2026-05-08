@@ -498,9 +498,6 @@ function OrderMobileCard({
           </div>
         </div>
         <div className="order-card-aside">
-          <div className="order-price-pill">
-            {order.price.toLocaleString("ru-RU")} ¥
-          </div>
           <div className="row-actions">
             <button
               type="button"
@@ -519,6 +516,10 @@ function OrderMobileCard({
             >
               {deleting ? <span className="spinner" /> : <TrashIcon />}
             </button>
+
+            <div className="order-price-pill">
+            {order.price.toLocaleString("ru-RU")} ¥
+          </div>
           </div>
         </div>
       </div>
