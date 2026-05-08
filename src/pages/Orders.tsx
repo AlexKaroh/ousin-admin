@@ -4,6 +4,7 @@ import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import {
   LinkIcon,
+  OrdersIcon,
   PencilIcon,
   SearchIcon,
   TrashIcon,
@@ -64,6 +65,14 @@ function statusClass(status: string) {
     return "badge status-done";
   if (["отменен", "отменён"].includes(s)) return "badge status-canceled";
   return "badge status-other";
+}
+
+function statusTone(status: string): "blue" | "emerald" | "rose" | "amber" {
+  const s = status.trim().toLowerCase();
+  if (s === "заявка") return "blue";
+  if (["получен", "завершен", "завершён", "выдан"].includes(s)) return "emerald";
+  if (["отменен", "отменён"].includes(s)) return "rose";
+  return "amber";
 }
 
 function formatDate(iso: string) {
@@ -242,7 +251,32 @@ export default function OrdersPage() {
 
       {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
 
-      <div className="table-wrap">
+      <div className="table-wrap orders-table-wrap">
+        <div className="orders-mobile">
+          {loading && (
+            <div className="empty-state app-card card-padded">
+              Загружаем заказы…
+            </div>
+          )}
+          {!loading && data && data.items.length === 0 && (
+            <div className="empty-state app-card card-padded">
+              Заказы не найдены
+            </div>
+          )}
+          {!loading &&
+            data?.items.map((order) => (
+              <OrderMobileCard
+                key={order.id}
+                order={order}
+                saving={savingId === order.id}
+                deleting={deletingId === order.id}
+                onStatusChange={(s) => handleQuickStatus(order, s)}
+                onTogglePaid={() => handleTogglePaid(order)}
+                onEdit={() => setEditing(order)}
+                onDelete={() => handleDelete(order)}
+              />
+            ))}
+        </div>
         <div className="table-scroll">
           <table className="app-table">
             <thead>
@@ -412,6 +446,163 @@ export default function OrdersPage() {
           await load();
         }}
       />
+    </div>
+  );
+}
+
+function OrderMobileCard({
+  order,
+  saving,
+  deleting,
+  onStatusChange,
+  onTogglePaid,
+  onEdit,
+  onDelete,
+}: {
+  order: AdminOrder;
+  saving: boolean;
+  deleting: boolean;
+  onStatusChange: (status: string) => void;
+  onTogglePaid: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const tone = statusTone(order.order_status);
+  const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
+  const userName = order.user
+    ? order.user.username
+      ? `@${order.user.username}`
+      : [order.user.first_name, order.user.last_name].filter(Boolean).join(" ") ||
+        order.user.telegram_id
+    : null;
+  const userInitial = (
+    order.user?.first_name ||
+    order.user?.username ||
+    "?"
+  )
+    .trim()
+    .slice(0, 1)
+    .toUpperCase();
+
+  return (
+    <div className={`order-card tone-${tone}`}>
+      <div className="order-card-row">
+        <div className="order-card-mark">
+          <OrdersIcon size={20} />
+        </div>
+        <div className="order-card-head">
+          <div className="order-card-title">{order.model || "Заказ"}</div>
+          <div className="order-card-sub">
+            <span className="dot" />
+            {order.delivery_type || "Доставка"}
+          </div>
+        </div>
+        <div className="order-card-aside">
+          <div className="order-price-pill">
+            {order.price.toLocaleString("ru-RU")} ¥
+          </div>
+          <div className="row-actions">
+            <button
+              type="button"
+              className="icon-btn primary"
+              onClick={onEdit}
+              aria-label="Редактировать"
+            >
+              <PencilIcon />
+            </button>
+            <button
+              type="button"
+              className="icon-btn danger"
+              onClick={onDelete}
+              disabled={deleting}
+              aria-label="Удалить"
+            >
+              {deleting ? <span className="spinner" /> : <TrashIcon />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="order-card-info-grid">
+        <div className="order-info-tile order-card-status">
+          <span className="order-info-label">Статус</span>
+          <select
+            className="app-input"
+            value={order.order_status}
+            disabled={saving}
+            onChange={(e) => onStatusChange(e.target.value)}
+          >
+            {!STATUSES.includes(order.order_status) && (
+              <option value={order.order_status}>{order.order_status}</option>
+            )}
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <span className={statusClass(order.order_status)}>
+            {order.order_status}
+          </span>
+        </div>
+        <div className="order-info-tile">
+          <span className="order-info-label">Оплата</span>
+          <button
+            type="button"
+            className={`order-info-toggle ${order.is_paid ? "is-paid" : ""}`}
+            onClick={onTogglePaid}
+            disabled={saving}
+          >
+            {order.is_paid ? "Оплачен" : "Не оплачен"}
+          </button>
+          <span className="order-info-label" style={{ marginTop: 4 }}>
+            Размер
+          </span>
+          <span className="order-info-value">{order.size ?? "—"}</span>
+        </div>
+      </div>
+
+      {order.user && (
+        <div className="order-card-user">
+          <div className="order-card-user-avatar">
+            {order.user.photo_url ? (
+              <img src={order.user.photo_url} alt="" />
+            ) : (
+              userInitial
+            )}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="order-card-user-name">{userName}</div>
+            <div className="order-card-user-tg font-mono">
+              tg: {order.user.telegram_id}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {order.order_url && (
+        <a
+          className="order-card-link"
+          href={order.order_url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <LinkIcon />
+          <span>Открыть товар</span>
+        </a>
+      )}
+
+      {order.comment && (
+        <div className="order-card-comment">
+          <span className="order-card-comment-label">Комментарий</span>
+          {order.comment}
+        </div>
+      )}
+
+      <div className="order-card-foot">
+        <span>{formatDate(order.order_date)}</span>
+        {shortId && <span className="order-card-id">{shortId}</span>}
+      </div>
     </div>
   );
 }
