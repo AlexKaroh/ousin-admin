@@ -86,17 +86,6 @@ export default function Dashboard() {
           <span className="stat-foot">Сумма по оплаченным заказам</span>
         </div>
       </div>
-
-      <div className="app-card card-padded">
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="admin-brand-sub">Подсказка</div>
-          <div style={{ fontSize: 14, color: "#1f2937" }}>
-            Управляйте заявками во вкладке <b>Заказы</b>: меняйте статус,
-            флаг оплаты, размер и комментарий. Карточка пользователя позволяет
-            корректировать имя, username и Telegram-фото.
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
