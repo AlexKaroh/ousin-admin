@@ -275,7 +275,7 @@ export default function OrdersPage() {
               {!loading &&
                 data?.items.map((order) => (
                   <tr key={order.id}>
-                    <td>
+                    <td data-label="Товар" data-mobile="full">
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <div style={{ fontWeight: 700 }}>{order.model || "—"}</div>
                         <div className="muted" style={{ fontSize: 12 }}>
@@ -300,7 +300,7 @@ export default function OrdersPage() {
                         )}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Клиент">
                       <div style={{ fontWeight: 600 }}>{userDisplay(order.user)}</div>
                       {order.user && (
                         <div className="muted font-mono" style={{ fontSize: 11 }}>
@@ -308,9 +308,9 @@ export default function OrdersPage() {
                         </div>
                       )}
                     </td>
-                    <td>{order.price.toLocaleString("ru-RU")} ¥</td>
-                    <td>{order.size ?? "—"}</td>
-                    <td>
+                    <td data-label="Цена">{order.price.toLocaleString("ru-RU")} ¥</td>
+                    <td data-label="Размер">{order.size ?? "—"}</td>
+                    <td data-label="Статус">
                       <select
                         className="app-input"
                         style={{ height: 36, fontSize: 13, paddingLeft: 10, paddingRight: 30 }}
@@ -333,7 +333,7 @@ export default function OrdersPage() {
                         </span>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Оплата">
                       <button
                         type="button"
                         className={
@@ -348,10 +348,10 @@ export default function OrdersPage() {
                         {order.is_paid ? "Оплачен" : "Не оплачен"}
                       </button>
                     </td>
-                    <td className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                    <td data-label="Дата" className="muted" style={{ fontSize: 12 }}>
                       {formatDate(order.order_date)}
                     </td>
-                    <td>
+                    <td data-label="Действия">
                       <div className="row-actions">
                         <button
                           type="button"

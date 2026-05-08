@@ -145,7 +145,7 @@ export default function ReviewsPage() {
                     .toUpperCase();
                   return (
                     <tr key={review.id}>
-                      <td>
+                      <td data-label="Автор" data-mobile="full">
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           {review.user.photo_url ? (
                             <img
@@ -189,7 +189,7 @@ export default function ReviewsPage() {
                           </div>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Заказ">
                         <div style={{ fontWeight: 600 }}>{review.order.model}</div>
                         {review.order.order_url && (
                           <a
@@ -202,10 +202,10 @@ export default function ReviewsPage() {
                           </a>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Оценка">
                         <Stars value={review.rating} />
                       </td>
-                      <td style={{ maxWidth: 360 }}>
+                      <td data-label="Текст" data-mobile="full" style={{ maxWidth: 360 }}>
                         <div
                           style={{
                             whiteSpace: "pre-wrap",
@@ -216,10 +216,10 @@ export default function ReviewsPage() {
                           {review.text}
                         </div>
                       </td>
-                      <td className="muted" style={{ fontSize: 13 }}>
+                      <td data-label="Дата" className="muted" style={{ fontSize: 13 }}>
                         {formatDate(review.created_at)}
                       </td>
-                      <td>
+                      <td data-label="Действия">
                         <button
                           type="button"
                           className="icon-btn danger"

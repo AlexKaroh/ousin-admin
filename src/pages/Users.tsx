@@ -187,7 +187,7 @@ export default function UsersPage() {
                     .toUpperCase();
                   return (
                     <tr key={user.id}>
-                      <td>
+                      <td data-label="Пользователь" data-mobile="full">
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           {user.photo_url ? (
                             <img
@@ -230,16 +230,22 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="font-mono muted">{user.telegram_id}</td>
-                      <td>
+                      <td data-label="Telegram" className="font-mono muted">
+                        {user.telegram_id}
+                      </td>
+                      <td data-label="Реф. код">
                         <span className="badge">{user.referral_code}</span>
                       </td>
-                      <td>{user.orders_count}</td>
-                      <td>{user.reviews_count}</td>
-                      <td className="muted" style={{ fontSize: 13 }}>
+                      <td data-label="Заказы">{user.orders_count}</td>
+                      <td data-label="Отзывы">{user.reviews_count}</td>
+                      <td
+                        data-label="Регистрация"
+                        className="muted"
+                        style={{ fontSize: 13 }}
+                      >
                         {formatDate(user.created_at)}
                       </td>
-                      <td>
+                      <td data-label="Действия">
                         <div className="row-actions">
                           <button
                             type="button"
