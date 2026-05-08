@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api";
 import PageHeader from "../components/PageHeader";
-import { TrashIcon } from "../components/Icons";
+import { LinkIcon, ReviewsIcon, TrashIcon } from "../components/Icons";
 
 type ReviewItem = {
   id: string;
@@ -109,7 +109,28 @@ export default function ReviewsPage() {
 
       {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
 
-      <div className="table-wrap">
+      <div className="table-wrap reviews-table-wrap">
+        <div className="reviews-mobile">
+          {loading && (
+            <div className="empty-state app-card card-padded">
+              Загружаем отзывы…
+            </div>
+          )}
+          {!loading && data && data.items.length === 0 && (
+            <div className="empty-state app-card card-padded">
+              Отзывов пока нет
+            </div>
+          )}
+          {!loading &&
+            data?.items.map((review) => (
+              <ReviewMobileCard
+                key={review.id}
+                review={review}
+                deleting={deletingId === review.id}
+                onDelete={() => handleDelete(review)}
+              />
+            ))}
+        </div>
         <div className="table-scroll">
           <table className="app-table">
             <thead>
@@ -259,6 +280,84 @@ export default function ReviewsPage() {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewMobileCard({
+  review,
+  deleting,
+  onDelete,
+}: {
+  review: ReviewItem;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  const initial = (review.user.first_name || review.user.username || "U")
+    .trim()
+    .slice(0, 1)
+    .toUpperCase();
+  const fullName =
+    [review.user.first_name, review.user.last_name].filter(Boolean).join(" ") ||
+    "—";
+  const usernameText = review.user.username
+    ? `@${review.user.username}`
+    : "без username";
+  const shortId = review.id ? `#${review.id.slice(0, 8)}` : "";
+
+  return (
+    <div className="review-card">
+      <div className="review-card-row">
+        <div className="user-card-avatar">
+          {review.user.photo_url ? <img src={review.user.photo_url} alt="" /> : initial}
+        </div>
+        <div className="review-card-head">
+          <div className="user-card-name">{fullName}</div>
+          <div className="user-card-sub">{usernameText}</div>
+        </div>
+        <button
+          type="button"
+          className="icon-btn danger"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label="Удалить отзыв"
+        >
+          {deleting ? <span className="spinner" /> : <TrashIcon />}
+        </button>
+      </div>
+
+      <div className="review-order-line">
+        <span className="user-chip">
+          <ReviewsIcon size={14} />
+          {review.order.model}
+        </span>
+        {review.order.order_url && (
+          <a
+            className="review-order-link"
+            href={review.order.order_url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <LinkIcon size={13} />
+            Товар
+          </a>
+        )}
+      </div>
+
+      <div className="review-stars">
+        <Stars value={review.rating} />
+        <span className="review-stars-value">{review.rating}/5</span>
+      </div>
+
+      <div className="review-text-block">
+        <span className="order-card-comment-label">Текст отзыва</span>
+        {review.text}
+      </div>
+
+      <div className="review-card-foot">
+        <span>{formatDate(review.created_at)}</span>
+        {shortId && <span className="order-card-id">{shortId}</span>}
       </div>
     </div>
   );

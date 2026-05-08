@@ -2,7 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
-import { PencilIcon, SearchIcon, TrashIcon } from "../components/Icons";
+import {
+  OrdersIcon,
+  PencilIcon,
+  ReviewsIcon,
+  SearchIcon,
+  TrashIcon,
+  UsersIcon,
+} from "../components/Icons";
 
 type AdminUser = {
   id: string;
@@ -150,7 +157,29 @@ export default function UsersPage() {
 
       {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
 
-      <div className="table-wrap">
+      <div className="table-wrap users-table-wrap">
+        <div className="users-mobile">
+          {loading && (
+            <div className="empty-state app-card card-padded">
+              Загружаем пользователей…
+            </div>
+          )}
+          {!loading && data && data.items.length === 0 && (
+            <div className="empty-state app-card card-padded">
+              Пользователи не найдены
+            </div>
+          )}
+          {!loading &&
+            data?.items.map((user) => (
+              <UserMobileCard
+                key={user.id}
+                user={user}
+                deleting={deletingId === user.id}
+                onEdit={() => setEditing(user)}
+                onDelete={() => handleDelete(user)}
+              />
+            ))}
+        </div>
         <div className="table-scroll">
           <table className="app-table">
             <thead>
@@ -305,6 +334,100 @@ export default function UsersPage() {
           await load();
         }}
       />
+    </div>
+  );
+}
+
+function UserMobileCard({
+  user,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  user: AdminUser;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const initial = (user.first_name || user.username || "U")
+    .trim()
+    .slice(0, 1)
+    .toUpperCase();
+  const fullName =
+    [user.first_name, user.last_name].filter(Boolean).join(" ") || "—";
+  const usernameText = user.username ? `@${user.username}` : "без username";
+  const shortId = user.id ? `#${user.id.slice(0, 8)}` : "";
+
+  return (
+    <div className="user-card">
+      <div className="user-card-row">
+        <div className="user-card-avatar">
+          {user.photo_url ? <img src={user.photo_url} alt="" /> : initial}
+        </div>
+        <div className="user-card-head">
+          <div className="user-card-name">{fullName}</div>
+          <div className="user-card-sub">{usernameText}</div>
+        </div>
+        <div className="row-actions">
+          <button
+            type="button"
+            className="icon-btn primary"
+            onClick={onEdit}
+            aria-label="Редактировать пользователя"
+          >
+            <PencilIcon />
+          </button>
+          <button
+            type="button"
+            className="icon-btn danger"
+            onClick={onDelete}
+            disabled={deleting}
+            aria-label="Удалить пользователя"
+          >
+            {deleting ? <span className="spinner" /> : <TrashIcon />}
+          </button>
+        </div>
+      </div>
+
+      <div className="user-card-meta">
+        <div className="user-meta-chip">
+          <span className="meta-label">Telegram</span>
+          <span className="font-mono">{user.telegram_id}</span>
+        </div>
+        <div className="user-meta-chip">
+          <span className="meta-label">Реф-код</span>
+          <span className="badge">{user.referral_code}</span>
+        </div>
+      </div>
+
+      <div className="user-card-stats">
+        <div className="user-stat-tile">
+          <span className="meta-label">Заказы</span>
+          <div className="user-stat-value">
+            <OrdersIcon size={15} />
+            {user.orders_count}
+          </div>
+        </div>
+        <div className="user-stat-tile">
+          <span className="meta-label">Отзывы</span>
+          <div className="user-stat-value">
+            <ReviewsIcon size={15} />
+            {user.reviews_count}
+          </div>
+        </div>
+        <div className="user-stat-tile">
+          <span className="meta-label">Регистрация</span>
+          <div className="user-stat-value">{formatDate(user.created_at)}</div>
+        </div>
+      </div>
+
+      <div className="user-card-foot">
+        <span className="user-chip">
+          <UsersIcon size={14} />
+          {user.referred_by ? `ref: ${user.referred_by}` : "без реферера"}
+        </span>
+        {shortId && <span className="order-card-id">{shortId}</span>}
+      </div>
     </div>
   );
 }

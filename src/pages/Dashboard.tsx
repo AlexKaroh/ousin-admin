@@ -86,6 +86,18 @@ export default function Dashboard() {
           <span className="stat-foot">Сумма по оплаченным заказам</span>
         </div>
       </div>
+
+      <div className="dashboard-callout">
+        <div className="dashboard-callout-mark">O</div>
+        <div className="dashboard-callout-body">
+          <div className="dashboard-callout-title">Быстрые действия</div>
+          <div className="dashboard-callout-text">
+            Перейдите в раздел <b>Заказы</b>, чтобы менять статус и оплату.
+            Раздел <b>Пользователи</b> нужен для ручной корректировки
+            профилей, а в <b>Отзывы</b> можно быстро модерировать фидбек.
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

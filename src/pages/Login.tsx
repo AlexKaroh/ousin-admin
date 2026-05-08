@@ -38,7 +38,7 @@ export default function Login() {
 
   return (
     <div className="login-shell">
-      <form className="login-card" onSubmit={handleSubmit}>
+      <form className="login-card login-card-pro" onSubmit={handleSubmit}>
         <div className="login-mark">O</div>
         <div>
           <div className="admin-brand-sub">Ousin Admin</div>
@@ -91,6 +91,12 @@ export default function Login() {
 
         <div className="muted" style={{ fontSize: 12, textAlign: "center" }}>
           Сессия хранится локально в браузере и истекает по сроку токена.
+        </div>
+
+        <div className="login-tips">
+          <span className="login-tip">JWT авторизация</span>
+          <span className="login-tip">Изолированная админ-зона</span>
+          <span className="login-tip">Управление заказами в 1 клик</span>
         </div>
       </form>
     </div>
