@@ -48,6 +48,12 @@ type ListResponse = {
   items: AdminOrder[];
 };
 
+type ProductImageResponse = {
+  imageUrl: string;
+  source?: string;
+  title?: string;
+};
+
 const REQUEST_STATUSES = ["Новые", "Исполнена", "Отклонена"] as const;
 const ORDER_STATUSES = [
   "В обработке",
@@ -85,6 +91,13 @@ function userDisplay(user: AdminOrderUser | null) {
 }
 
 const PAGE_SIZE = 20;
+const AI_API_BASE_URL =
+  (import.meta.env.VITE_AI_API_BASE_URL as string | undefined) || "http://localhost:3001";
+
+function hasProductImage(orderPhoto: string | null | undefined) {
+  const value = String(orderPhoto || "").trim();
+  return Boolean(value) && !value.includes("order-no-product-photo");
+}
 
 export default function OrdersPage() {
   const [data, setData] = useState<ListResponse | null>(null);
@@ -98,6 +111,7 @@ export default function OrdersPage() {
   const [editing, setEditing] = useState<AdminOrder | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [imageGeneratingId, setImageGeneratingId] = useState<string | null>(null);
   const [expandedMobileOrderId, setExpandedMobileOrderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -177,6 +191,47 @@ export default function OrdersPage() {
     }
   }
 
+  async function handleGenerateImage(order: AdminOrder) {
+    if (!order.order_url) {
+      setError("У заявки нет ссылки на товар");
+      return;
+    }
+    setImageGeneratingId(order.id);
+    setError("");
+    try {
+      const res = await fetch(`${AI_API_BASE_URL}/api/find-product-image`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: order.order_url,
+          model: order.model,
+        }),
+      });
+
+      const payload = (await res.json().catch(() => null)) as ProductImageResponse | { error?: string } | null;
+      if (!res.ok || !payload || !("imageUrl" in payload) || !payload.imageUrl) {
+        throw new Error(
+          payload && "error" in payload && payload.error
+            ? payload.error
+            : "Не удалось найти изображение товара",
+        );
+      }
+
+      await apiFetch(`/admin/orders/${order.id}`, {
+        method: "PATCH",
+        body: { order_photo: payload.imageUrl },
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сгенерировать изображение");
+    } finally {
+      setImageGeneratingId(null);
+    }
+  }
+
   const totalPages = useMemo(() => {
     if (!data) return 1;
     return Math.max(1, Math.ceil(data.total / PAGE_SIZE));
@@ -210,7 +265,7 @@ export default function OrdersPage() {
             <SearchIcon size={16} />
           </span>
         </div>
-        <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "inline-flex", gap: 6 }}>
           <button
             type="button"
             className={statusFilter === "" ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
@@ -273,6 +328,7 @@ export default function OrdersPage() {
                 order={order}
                 saving={savingId === order.id}
                 deleting={deletingId === order.id}
+                imageGenerating={imageGeneratingId === order.id}
                 expanded={expandedMobileOrderId === order.id}
                 onToggleExpand={() =>
                   setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
@@ -282,6 +338,7 @@ export default function OrdersPage() {
                 }
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
+                onGenerateImage={() => handleGenerateImage(order)}
               />
             ))}
         </div>
@@ -341,6 +398,20 @@ export default function OrdersPage() {
                             <span className="truncate">{order.order_url}</span>
                           </a>
                         )}
+                        <button
+                          type="button"
+                          className="app-btn app-btn-soft"
+                          style={{ alignSelf: "flex-start", height: 30, padding: "0 10px", fontSize: 12 }}
+                          onClick={() => handleGenerateImage(order)}
+                          disabled={imageGeneratingId === order.id}
+                          title="Найти и сохранить изображение товара"
+                        >
+                          {imageGeneratingId === order.id
+                            ? "Ищем фото..."
+                            : hasProductImage(order.order_photo)
+                              ? "Обновить изображение"
+                              : "Сгенерировать изображение"}
+                        </button>
                       </div>
                     </td>
                     <td data-label="Клиент">
@@ -478,20 +549,24 @@ function OrderMobileCard({
   order,
   saving,
   deleting,
+  imageGenerating,
   expanded,
   onToggleExpand,
   onStatusChange,
   onEdit,
   onDelete,
+  onGenerateImage,
 }: {
   order: AdminOrder;
   saving: boolean;
   deleting: boolean;
+  imageGenerating: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   onStatusChange: (requestStatus: string, orderStatus: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onGenerateImage: () => void;
 }) {
   const tone = statusTone(order.request_status);
   const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
@@ -511,7 +586,7 @@ function OrderMobileCard({
     <div className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}>
       <div className="order-card-collapsed">
         <div className="order-card-preview">
-          {order.order_photo ? (
+          {hasProductImage(order.order_photo) ? (
             <img src={order.order_photo} alt={order.model || "Товар"} />
           ) : (
             <span>Фото</span>
@@ -626,6 +701,21 @@ function OrderMobileCard({
               <span>Открыть товар</span>
             </a>
           )}
+
+          <button
+            type="button"
+            className="order-card-link order-card-image-action"
+            onClick={onGenerateImage}
+            disabled={imageGenerating}
+          >
+            <span>
+              {imageGenerating
+                ? "Ищем фото..."
+                : hasProductImage(order.order_photo)
+                  ? "Обновить изображение"
+                  : "Сгенерировать изображение"}
+            </span>
+          </button>
 
           {order.comment && (
             <div className="order-card-comment">

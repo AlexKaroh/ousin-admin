@@ -1190,6 +1190,17 @@ select.app-input {
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
 }
 
+.order-card-image-action {
+  border: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  cursor: pointer;
+}
+
+.order-card-image-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .order-card-link span {
   max-width: 220px;
   overflow: hidden;
