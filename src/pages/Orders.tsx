@@ -547,7 +547,7 @@ function OrderMobileCard({
   onGenerateImage: () => void;
 }) {
   const tone = statusTone(order.request_status);
-  const [swipeOpen, setSwipeOpen] = useState(false);
+  const [swipeOpen, setSwipeOpen] = useState<"edit" | "delete" | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
@@ -562,7 +562,8 @@ function OrderMobileCard({
     .slice(0, 1)
     .toUpperCase();
   const displayUserName = userName || "Пользователь";
-  const swipeX = dragStart ? dragOffset : swipeOpen ? -82 : 0;
+  const openedOffset = swipeOpen === "edit" ? 82 : swipeOpen === "delete" ? -82 : 0;
+  const swipeX = dragStart ? dragOffset : openedOffset;
 
   function isInteractiveTarget(target: EventTarget | null) {
     return target instanceof HTMLElement
@@ -573,7 +574,7 @@ function OrderMobileCard({
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType === "mouse" || isInteractiveTarget(e.target)) return;
     setDragStart({ x: e.clientX, y: e.clientY });
-    setDragOffset(swipeOpen ? -82 : 0);
+    setDragOffset(openedOffset);
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -585,19 +586,29 @@ function OrderMobileCard({
       setDragOffset(0);
       return;
     }
-    const next = Math.max(-92, Math.min(0, (swipeOpen ? -82 : 0) + dx));
+    const next = Math.max(-92, Math.min(92, openedOffset + dx));
     setDragOffset(next);
   }
 
   function handlePointerUp() {
     if (!dragStart) return;
-    setSwipeOpen(dragOffset < -42);
+    if (dragOffset < -42) setSwipeOpen("delete");
+    else if (dragOffset > 42) setSwipeOpen("edit");
+    else setSwipeOpen(null);
     setDragStart(null);
     setDragOffset(0);
   }
 
   return (
-    <div className={`order-card-swipe ${swipeOpen ? "is-swiped" : ""}`}>
+    <div className={`order-card-swipe ${swipeOpen ? `is-swiped is-swiped-${swipeOpen}` : ""}`}>
+      <button
+        type="button"
+        className="order-card-swipe-edit"
+        onClick={onEdit}
+        aria-label="Редактировать заявку"
+      >
+        <PencilIcon />
+      </button>
       <button
         type="button"
         className="order-card-swipe-delete"
