@@ -91,8 +91,6 @@ function userDisplay(user: AdminOrderUser | null) {
 }
 
 const PAGE_SIZE = 20;
-const AI_API_BASE_URL =
-  (import.meta.env.VITE_AI_API_BASE_URL as string | undefined) || "https://ousin-back-production.up.railway.app";
 
 function hasProductImage(orderPhoto: string | null | undefined) {
   const value = String(orderPhoto || "").trim();
@@ -199,25 +197,15 @@ export default function OrdersPage() {
     setImageGeneratingId(order.id);
     setError("");
     try {
-      const res = await fetch(`${AI_API_BASE_URL}/api/find-product-image`, {
+      const payload = await apiFetch<ProductImageResponse>("/api/find-product-image", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        body: {
           url: order.order_url,
           model: order.model,
-        }),
+        },
       });
-
-      const payload = (await res.json().catch(() => null)) as ProductImageResponse | { error?: string } | null;
-      if (!res.ok || !payload || !("imageUrl" in payload) || !payload.imageUrl) {
-        throw new Error(
-          payload && "error" in payload && payload.error
-            ? payload.error
-            : "Не удалось найти изображение товара",
-        );
+      if (!payload.imageUrl) {
+        throw new Error("Не удалось найти изображение товара");
       }
 
       await apiFetch(`/admin/orders/${order.id}`, {
