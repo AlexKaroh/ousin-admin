@@ -874,7 +874,7 @@ select.app-input {
 .order-card-swipe {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 0px;
 }
 
 .order-card-swipe-delete,
