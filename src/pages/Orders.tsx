@@ -254,16 +254,6 @@ export default function OrdersPage() {
           </span>
         </div>
         <div style={{ display: "inline-flex", gap: 6 }}>
-          <button
-            type="button"
-            className={statusFilter === "" ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
-            onClick={() => {
-              setPage(0);
-              setStatusFilter("");
-            }}
-          >
-            Все
-          </button>
           {REQUEST_STATUSES.map((s) => (
             <button
               key={s}
@@ -557,6 +547,9 @@ function OrderMobileCard({
   onGenerateImage: () => void;
 }) {
   const tone = statusTone(order.request_status);
+  const [swipeOpen, setSwipeOpen] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
   const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
   const userName = order.user
     ? order.user.username
@@ -569,9 +562,59 @@ function OrderMobileCard({
     .slice(0, 1)
     .toUpperCase();
   const displayUserName = userName || "Пользователь";
+  const swipeX = dragStart ? dragOffset : swipeOpen ? -82 : 0;
+
+  function isInteractiveTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement
+      ? Boolean(target.closest("button, a, input, select, textarea, label"))
+      : false;
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse" || isInteractiveTarget(e.target)) return;
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragOffset(swipeOpen ? -82 : 0);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragStart) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+      setDragStart(null);
+      setDragOffset(0);
+      return;
+    }
+    const next = Math.max(-92, Math.min(0, (swipeOpen ? -82 : 0) + dx));
+    setDragOffset(next);
+  }
+
+  function handlePointerUp() {
+    if (!dragStart) return;
+    setSwipeOpen(dragOffset < -42);
+    setDragStart(null);
+    setDragOffset(0);
+  }
 
   return (
-    <div className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}>
+    <div className={`order-card-swipe ${swipeOpen ? "is-swiped" : ""}`}>
+      <button
+        type="button"
+        className="order-card-swipe-delete"
+        onClick={onDelete}
+        disabled={deleting}
+        aria-label="Удалить заявку"
+      >
+        {deleting ? <span className="spinner" /> : "×"}
+      </button>
+      <div
+        className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{ transform: `translateX(${swipeX}px)` }}
+      >
       <div className="order-card-collapsed">
         <div className="order-card-preview">
           {hasProductImage(order.order_photo) ? (
@@ -735,6 +778,7 @@ function OrderMobileCard({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

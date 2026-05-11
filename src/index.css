@@ -871,6 +871,34 @@ select.app-input {
   gap: 12px;
 }
 
+.order-card-swipe {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.order-card-swipe-delete {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 76px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+}
+
+.order-card-swipe-delete:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
 .order-card {
   position: relative;
   overflow: hidden;
@@ -888,6 +916,14 @@ select.app-input {
   display: flex;
   flex-direction: column;
   gap: 0;
+  touch-action: pan-y;
+  transition: transform 220ms ease;
+  will-change: transform;
+  z-index: 1;
+}
+
+.order-card-swipe.is-swiped .order-card {
+  transition-duration: 180ms;
 }
 
 .order-card.tone-emerald {
