@@ -271,7 +271,6 @@ export default function OrdersPage() {
                 saving={savingId === order.id}
                 deleting={deletingId === order.id}
                 onStatusChange={(s) => handleQuickStatus(order, s)}
-                onTogglePaid={() => handleTogglePaid(order)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
               />
@@ -455,7 +454,6 @@ function OrderMobileCard({
   saving,
   deleting,
   onStatusChange,
-  onTogglePaid,
   onEdit,
   onDelete,
 }: {
@@ -463,7 +461,6 @@ function OrderMobileCard({
   saving: boolean;
   deleting: boolean;
   onStatusChange: (status: string) => void;
-  onTogglePaid: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -542,21 +539,9 @@ function OrderMobileCard({
               </option>
             ))}
           </select>
-          <span className={statusClass(order.order_status)}>
-            {order.order_status}
-          </span>
         </div>
-        <div className="order-info-tile">
-          <span className="order-info-label">Оплата</span>
-          <button
-            type="button"
-            className={`order-info-toggle ${order.is_paid ? "is-paid" : ""}`}
-            onClick={onTogglePaid}
-            disabled={saving}
-          >
-            {order.is_paid ? "Оплачен" : "Не оплачен"}
-          </button>
-          <span className="order-info-label" style={{ marginTop: 4 }}>
+        <div className="order-info-tile order-info-size">
+          <span className="order-info-label">
             Размер
           </span>
           <span className="order-info-value">{order.size ?? "—"}</span>
