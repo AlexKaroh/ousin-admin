@@ -30,6 +30,7 @@ type AdminOrder = {
   price: number;
   comment: string | null;
   order_date: string;
+  request_status: string;
   order_status: string;
   is_paid: boolean;
   review: {
@@ -47,30 +48,19 @@ type ListResponse = {
   items: AdminOrder[];
 };
 
-const STATUSES = [
-  "Заявка",
+const REQUEST_STATUSES = ["Новые", "Исполнена", "Отклонена"] as const;
+const ORDER_STATUSES = [
   "В обработке",
-  "Оплачен",
-  "В пути",
-  "Получен",
-  "Завершен",
-  "Отменен",
-];
-
-function statusClass(status: string) {
-  const s = status.trim().toLowerCase();
-  if (s === "заявка") return "badge status-zayavka";
-  if (["получен", "завершен", "завершён", "выдан"].includes(s))
-    return "badge status-done";
-  if (["отменен", "отменён"].includes(s)) return "badge status-canceled";
-  return "badge status-other";
-}
+  "В пути по Китаю",
+  "Готов к выдаче",
+  "Выдан",
+] as const;
 
 function statusTone(status: string): "blue" | "emerald" | "rose" | "amber" {
   const s = status.trim().toLowerCase();
-  if (s === "заявка") return "blue";
-  if (["получен", "завершен", "завершён", "выдан"].includes(s)) return "emerald";
-  if (["отменен", "отменён"].includes(s)) return "rose";
+  if (s === "новые") return "blue";
+  if (s === "исполнена") return "emerald";
+  if (s === "отклонена") return "rose";
   return "amber";
 }
 
@@ -140,12 +130,16 @@ export default function OrdersPage() {
     setSearch(searchInput.trim());
   }
 
-  async function handleQuickStatus(order: AdminOrder, nextStatus: string) {
+  async function handleQuickStatus(
+    order: AdminOrder,
+    nextRequestStatus: string,
+    nextOrderStatus: string,
+  ) {
     setSavingId(order.id);
     try {
       await apiFetch(`/admin/orders/${order.id}`, {
         method: "PATCH",
-        body: { order_status: nextStatus },
+        body: { request_status: nextRequestStatus, order_status: nextOrderStatus },
       });
       await load();
     } catch (err) {
@@ -192,7 +186,7 @@ export default function OrdersPage() {
     <div>
       <PageHeader
         title="Заказы"
-        subtitle="Все заявки и заказы пользователей. Меняйте статусы, флаг оплаты, размер и комментарий."
+        subtitle="Управляйте общим статусом заявки и внутренним статусом заказа."
       />
 
       <form className="toolbar" onSubmit={applySearch}>
@@ -216,22 +210,31 @@ export default function OrdersPage() {
             <SearchIcon size={16} />
           </span>
         </div>
-        <select
-          className="app-input"
-          style={{ width: 200 }}
-          value={statusFilter}
-          onChange={(e) => {
-            setPage(0);
-            setStatusFilter(e.target.value);
-          }}
-        >
-          <option value="">Все статусы</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
+        <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={statusFilter === "" ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
+            onClick={() => {
+              setPage(0);
+              setStatusFilter("");
+            }}
+          >
+            Все
+          </button>
+          {REQUEST_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={statusFilter === s ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
+              onClick={() => {
+                setPage(0);
+                setStatusFilter(s);
+              }}
+            >
               {s}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
         <button type="submit" className="app-btn app-btn-primary">
           Применить
         </button>
@@ -274,7 +277,9 @@ export default function OrdersPage() {
                 onToggleExpand={() =>
                   setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
                 }
-                onStatusChange={(s) => handleQuickStatus(order, s)}
+                onStatusChange={(requestStatus, orderStatus) =>
+                  handleQuickStatus(order, requestStatus, orderStatus)
+                }
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
               />
@@ -288,7 +293,8 @@ export default function OrdersPage() {
                 <th>Пользователь</th>
                 <th>Цена</th>
                 <th>Размер</th>
-                <th>Статус</th>
+                <th>Заявка</th>
+                <th>Статус внутри</th>
                 <th>Оплачено</th>
                 <th>Дата</th>
                 <th style={{ width: 1 }}></th>
@@ -297,14 +303,14 @@ export default function OrdersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     Загружаем заказы…
                   </td>
                 </tr>
               )}
               {!loading && data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     Заказы не найдены
                   </td>
                 </tr>
@@ -347,28 +353,43 @@ export default function OrdersPage() {
                     </td>
                     <td data-label="Цена">{order.price.toLocaleString("ru-RU")} ¥</td>
                     <td data-label="Размер">{order.size ?? "—"}</td>
-                    <td data-label="Статус">
+                    <td data-label="Заявка">
+                      <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
+                        {REQUEST_STATUSES.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            className={order.request_status === s ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
+                            style={{ height: 30, padding: "0 10px", fontSize: 12 }}
+                            disabled={savingId === order.id}
+                            onClick={() =>
+                              handleQuickStatus(order, s, order.order_status)
+                            }
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                    <td data-label="Статус внутри">
                       <select
                         className="app-input"
                         style={{ height: 36, fontSize: 13, paddingLeft: 10, paddingRight: 30 }}
                         value={order.order_status}
                         disabled={savingId === order.id}
-                        onChange={(e) => handleQuickStatus(order, e.target.value)}
+                        onChange={(e) =>
+                          handleQuickStatus(order, order.request_status, e.target.value)
+                        }
                       >
-                        {!STATUSES.includes(order.order_status) && (
+                        {!ORDER_STATUSES.includes(order.order_status as (typeof ORDER_STATUSES)[number]) && (
                           <option value={order.order_status}>{order.order_status}</option>
                         )}
-                        {STATUSES.map((s) => (
+                        {ORDER_STATUSES.map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
                         ))}
                       </select>
-                      <div style={{ marginTop: 4 }}>
-                        <span className={statusClass(order.order_status)}>
-                          {order.order_status}
-                        </span>
-                      </div>
                     </td>
                     <td data-label="Оплата">
                       <button
@@ -468,11 +489,11 @@ function OrderMobileCard({
   deleting: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
-  onStatusChange: (status: string) => void;
+  onStatusChange: (requestStatus: string, orderStatus: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const tone = statusTone(order.order_status);
+  const tone = statusTone(order.request_status);
   const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
   const userName = order.user
     ? order.user.username
@@ -536,24 +557,41 @@ function OrderMobileCard({
         <div className="order-card-expand-inner">
           <div className="order-card-info-grid">
             <div className="order-info-tile order-card-status">
-              <span className="order-info-label">Статус</span>
+              <span className="order-info-label">Заявка</span>
+              <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
+                {REQUEST_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={order.request_status === s ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
+                    style={{ height: 28, padding: "0 8px", fontSize: 11 }}
+                    disabled={saving}
+                    onClick={() => onStatusChange(s, order.order_status)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="order-info-tile order-card-status">
+              <span className="order-info-label">Статус внутри</span>
               <select
                 className="app-input"
                 value={order.order_status}
                 disabled={saving}
-                onChange={(e) => onStatusChange(e.target.value)}
+                onChange={(e) => onStatusChange(order.request_status, e.target.value)}
               >
-                {!STATUSES.includes(order.order_status) && (
+                {!ORDER_STATUSES.includes(order.order_status as (typeof ORDER_STATUSES)[number]) && (
                   <option value={order.order_status}>{order.order_status}</option>
                 )}
-                {STATUSES.map((s) => (
+                {ORDER_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="order-info-tile order-info-size">
+            <div className="order-info-tile order-info-size" style={{ gridColumn: "1 / -1" }}>
               <span className="order-info-label">Размер</span>
               <span className="order-info-value">{order.size ?? "—"}</span>
             </div>
@@ -638,6 +676,7 @@ function EditOrderModal({
   const [deliveryType, setDeliveryType] = useState("");
   const [price, setPrice] = useState("");
   const [size, setSize] = useState("");
+  const [requestStatus, setRequestStatus] = useState("");
   const [status, setStatus] = useState("");
   const [isPaid, setIsPaid] = useState(false);
   const [comment, setComment] = useState("");
@@ -651,6 +690,7 @@ function EditOrderModal({
     setDeliveryType(order.delivery_type || "");
     setPrice(String(order.price ?? ""));
     setSize(order.size == null ? "" : String(order.size));
+    setRequestStatus(order.request_status || "");
     setStatus(order.order_status || "");
     setIsPaid(Boolean(order.is_paid));
     setComment(order.comment || "");
@@ -669,6 +709,7 @@ function EditOrderModal({
         model: model.trim(),
         order_url: orderUrl.trim(),
         delivery_type: deliveryType.trim(),
+        request_status: requestStatus.trim(),
         order_status: status.trim(),
         is_paid: isPaid,
         comment,
@@ -764,22 +805,39 @@ function EditOrderModal({
             />
           </div>
           <div className="field">
-            <label className="field-label">Статус</label>
+            <label className="field-label">Статус заявки</label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              value={requestStatus}
+              onChange={(e) => setRequestStatus(e.target.value)}
               className="app-input"
             >
-              {!STATUSES.includes(status) && status && (
-                <option value={status}>{status}</option>
+              {!REQUEST_STATUSES.includes(requestStatus as (typeof REQUEST_STATUSES)[number]) && requestStatus && (
+                <option value={requestStatus}>{requestStatus}</option>
               )}
-              {STATUSES.map((s) => (
+              {REQUEST_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
             </select>
           </div>
+        </div>
+        <div className="field">
+            <label className="field-label">Статус внутри</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="app-input"
+            >
+              {!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number]) && status && (
+                <option value={status}>{status}</option>
+              )}
+              {ORDER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
         </div>
         <label
           style={{
