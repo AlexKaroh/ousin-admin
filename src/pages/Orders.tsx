@@ -92,7 +92,7 @@ function userDisplay(user: AdminOrderUser | null) {
 
 const PAGE_SIZE = 20;
 const AI_API_BASE_URL =
-  (import.meta.env.VITE_AI_API_BASE_URL as string | undefined) || "http://localhost:3001";
+  (import.meta.env.VITE_AI_API_BASE_URL as string | undefined) || "https://ousin-back-production.up.railway.app";
 
 function hasProductImage(orderPhoto: string | null | undefined) {
   const value = String(orderPhoto || "").trim();
