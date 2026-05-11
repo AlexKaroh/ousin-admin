@@ -881,8 +881,7 @@ select.app-input {
 .order-card-swipe-edit {
   position: absolute;
   inset-block: 0;
-  width: 55px;
-  height: 55px;
+  width: 76px;
   border: 0;
   border-radius: 20px;
   color: #fff;
