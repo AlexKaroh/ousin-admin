@@ -887,7 +887,7 @@ select.app-input {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
 }
 
 .order-card.tone-emerald {
@@ -940,24 +940,33 @@ select.app-input {
   filter: blur(20px);
 }
 
-.order-card-row {
+.order-card-collapsed {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   z-index: 1;
 }
 
-.order-card-mark {
+.order-card-preview {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 54px;
+  height: 54px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: #fff;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.7));
+  color: rgba(255, 255, 255, 0.88);
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.order-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .order-card-head {
@@ -975,7 +984,7 @@ select.app-input {
 }
 
 .order-card-sub {
-  margin-top: 3px;
+  margin-top: 2px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -984,20 +993,23 @@ select.app-input {
   color: var(--text-muted);
 }
 
-.order-card-sub .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--primary);
+.order-card-id-text {
+  letter-spacing: 0;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
 }
 
-.order-card.tone-emerald .order-card-sub .dot { background: #16a34a; }
-.order-card.tone-rose .order-card-sub .dot { background: #ef4444; }
-.order-card.tone-amber .order-card-sub .dot { background: #f59e0b; }
+.order-card-user-inline {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
 
 .order-card-aside {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 6px;
   flex-shrink: 0;
 }
@@ -1105,6 +1117,48 @@ select.app-input {
 
 .order-info-size {
   justify-content: center;
+}
+
+.order-card-chevron {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.84);
+  color: #64748b;
+  display: grid;
+  place-items: center;
+  transition: transform 220ms ease, background-color 220ms ease, color 220ms ease;
+}
+
+.order-card-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.order-card-chevron.is-open {
+  transform: rotate(180deg);
+  background: rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+}
+
+.order-card-expand {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 280ms ease, opacity 220ms ease;
+}
+
+.order-card-expand-inner {
+  padding-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-card.is-open .order-card-expand {
+  max-height: 520px;
+  opacity: 1;
 }
 
 .order-card-meta {
@@ -1216,6 +1270,10 @@ select.app-input {
   font-weight: 700;
   color: #0f172a;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .order-card-user-tg {

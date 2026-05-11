@@ -4,7 +4,6 @@ import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import {
   LinkIcon,
-  OrdersIcon,
   PencilIcon,
   SearchIcon,
   TrashIcon,
@@ -109,6 +108,7 @@ export default function OrdersPage() {
   const [editing, setEditing] = useState<AdminOrder | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedMobileOrderId, setExpandedMobileOrderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -270,6 +270,10 @@ export default function OrdersPage() {
                 order={order}
                 saving={savingId === order.id}
                 deleting={deletingId === order.id}
+                expanded={expandedMobileOrderId === order.id}
+                onToggleExpand={() =>
+                  setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
+                }
                 onStatusChange={(s) => handleQuickStatus(order, s)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
@@ -453,6 +457,8 @@ function OrderMobileCard({
   order,
   saving,
   deleting,
+  expanded,
+  onToggleExpand,
   onStatusChange,
   onEdit,
   onDelete,
@@ -460,6 +466,8 @@ function OrderMobileCard({
   order: AdminOrder;
   saving: boolean;
   deleting: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onStatusChange: (status: string) => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -472,122 +480,145 @@ function OrderMobileCard({
       : [order.user.first_name, order.user.last_name].filter(Boolean).join(" ") ||
         order.user.telegram_id
     : null;
-  const userInitial = (
-    order.user?.first_name ||
-    order.user?.username ||
-    "?"
-  )
+  const userInitial = (order.user?.first_name || order.user?.username || "?")
     .trim()
     .slice(0, 1)
     .toUpperCase();
+  const displayUserName = userName || "Пользователь";
 
   return (
-    <div className={`order-card tone-${tone}`}>
-      <div className="order-card-row">
-        <div className="order-card-mark">
-          <OrdersIcon size={20} />
+    <div className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}>
+      <div className="order-card-collapsed">
+        <div className="order-card-preview">
+          {order.order_photo ? (
+            <img src={order.order_photo} alt={order.model || "Товар"} />
+          ) : (
+            <span>Фото</span>
+          )}
         </div>
         <div className="order-card-head">
           <div className="order-card-title">{order.model || "Заказ"}</div>
-          <div className="order-card-sub">
-            <span className="dot" />
-            {order.delivery_type || "Доставка"}
+          <div className="order-card-sub order-card-id-text">{shortId || "—"}</div>
+          <div className="order-card-user-inline">
+            <div className="order-card-user-avatar">
+              {order.user?.photo_url ? (
+                <img src={order.user.photo_url} alt="" />
+              ) : (
+                userInitial
+              )}
+            </div>
+            <span className="order-card-user-name">{displayUserName}</span>
           </div>
         </div>
         <div className="order-card-aside">
-          <div className="row-actions">
-            <button
-              type="button"
-              className="icon-btn primary"
-              onClick={onEdit}
-              aria-label="Редактировать"
-            >
-              <PencilIcon />
-            </button>
-            <button
-              type="button"
-              className="icon-btn danger"
-              onClick={onDelete}
-              disabled={deleting}
-              aria-label="Удалить"
-            >
-              {deleting ? <span className="spinner" /> : <TrashIcon />}
-            </button>
-
-            <div className="order-price-pill">
-            {order.price.toLocaleString("ru-RU")} ¥
-          </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="order-card-info-grid">
-        <div className="order-info-tile order-card-status">
-          <span className="order-info-label">Статус</span>
-          <select
-            className="app-input"
-            value={order.order_status}
-            disabled={saving}
-            onChange={(e) => onStatusChange(e.target.value)}
+          <div className="order-price-pill">{order.price.toLocaleString("ru-RU")} ¥</div>
+          <button
+            type="button"
+            className={`order-card-chevron ${expanded ? "is-open" : ""}`}
+            onClick={onToggleExpand}
+            aria-label={expanded ? "Свернуть заявку" : "Развернуть заявку"}
+            aria-expanded={expanded}
           >
-            {!STATUSES.includes(order.order_status) && (
-              <option value={order.order_status}>{order.order_status}</option>
-            )}
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="order-info-tile order-info-size">
-          <span className="order-info-label">
-            Размер
-          </span>
-          <span className="order-info-value">{order.size ?? "—"}</span>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path
+                d="M5 8l5 5 5-5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {order.user && (
-        <div className="order-card-user">
-          <div className="order-card-user-avatar">
-            {order.user.photo_url ? (
-              <img src={order.user.photo_url} alt="" />
-            ) : (
-              userInitial
-            )}
+      <div className="order-card-expand">
+        <div className="order-card-expand-inner">
+          <div className="order-card-info-grid">
+            <div className="order-info-tile order-card-status">
+              <span className="order-info-label">Статус</span>
+              <select
+                className="app-input"
+                value={order.order_status}
+                disabled={saving}
+                onChange={(e) => onStatusChange(e.target.value)}
+              >
+                {!STATUSES.includes(order.order_status) && (
+                  <option value={order.order_status}>{order.order_status}</option>
+                )}
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="order-info-tile order-info-size">
+              <span className="order-info-label">Размер</span>
+              <span className="order-info-value">{order.size ?? "—"}</span>
+            </div>
           </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div className="order-card-user-name">{userName}</div>
-            <div className="order-card-user-tg font-mono">
-              tg: {order.user.telegram_id}
+
+          {order.user && (
+            <div className="order-card-user">
+              <div className="order-card-user-avatar">
+                {order.user.photo_url ? (
+                  <img src={order.user.photo_url} alt="" />
+                ) : (
+                  userInitial
+                )}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="order-card-user-name">{userName}</div>
+                <div className="order-card-user-tg font-mono">
+                  tg: {order.user.telegram_id}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {order.order_url && (
+            <a
+              className="order-card-link"
+              href={order.order_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <LinkIcon />
+              <span>Открыть товар</span>
+            </a>
+          )}
+
+          {order.comment && (
+            <div className="order-card-comment">
+              <span className="order-card-comment-label">Комментарий</span>
+              {order.comment}
+            </div>
+          )}
+
+          <div className="order-card-foot">
+            <span>{formatDate(order.order_date)}</span>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="icon-btn primary"
+                onClick={onEdit}
+                aria-label="Редактировать"
+              >
+                <PencilIcon />
+              </button>
+              <button
+                type="button"
+                className="icon-btn danger"
+                onClick={onDelete}
+                disabled={deleting}
+                aria-label="Удалить"
+              >
+                {deleting ? <span className="spinner" /> : <TrashIcon />}
+              </button>
             </div>
           </div>
         </div>
-      )}
-
-      {order.order_url && (
-        <a
-          className="order-card-link"
-          href={order.order_url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <LinkIcon />
-          <span>Открыть товар</span>
-        </a>
-      )}
-
-      {order.comment && (
-        <div className="order-card-comment">
-          <span className="order-card-comment-label">Комментарий</span>
-          {order.comment}
-        </div>
-      )}
-
-      <div className="order-card-foot">
-        <span>{formatDate(order.order_date)}</span>
-        {shortId && <span className="order-card-id">{shortId}</span>}
       </div>
     </div>
   );
