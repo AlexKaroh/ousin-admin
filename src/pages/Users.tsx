@@ -21,6 +21,7 @@ type AdminUser = {
   referral_code: string;
   referred_by: string | null;
   referrals_count: number;
+  referral_points: number;
   created_at: string;
   orders_count: number;
   reviews_count: number;
@@ -187,6 +188,7 @@ export default function UsersPage() {
                 <th>Пользователь</th>
                 <th>Telegram</th>
                 <th>Реф. код</th>
+                <th>Реф. баллы</th>
                 <th>Заказы</th>
                 <th>Отзывы</th>
                 <th>Регистрация</th>
@@ -196,14 +198,14 @@ export default function UsersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     Загружаем пользователей…
                   </td>
                 </tr>
               )}
               {!loading && data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     Пользователи не найдены
                   </td>
                 </tr>
@@ -264,6 +266,9 @@ export default function UsersPage() {
                       </td>
                       <td data-label="Реф. код">
                         <span className="badge">{user.referral_code}</span>
+                      </td>
+                      <td data-label="Баллы" className="tabular-nums">
+                        {user.referral_points}
                       </td>
                       <td data-label="Заказы">{user.orders_count}</td>
                       <td data-label="Отзывы">{user.reviews_count}</td>
@@ -446,6 +451,7 @@ function EditUserModal({
   const [lastName, setLastName] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [referredBy, setReferredBy] = useState("");
+  const [referralPoints, setReferralPoints] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -456,6 +462,7 @@ function EditUserModal({
     setLastName(user.last_name || "");
     setPhotoUrl(user.photo_url || "");
     setReferredBy(user.referred_by || "");
+    setReferralPoints(String(user.referral_points ?? 0));
     setError("");
   }, [user]);
 
@@ -475,6 +482,10 @@ function EditUserModal({
           last_name: lastName,
           photo_url: photoUrl,
           referred_by: referredBy,
+          referral_points: Math.max(
+            0,
+            Math.round(Number(String(referralPoints).replace(",", ".").trim()) || 0),
+          ),
         },
       });
       onSaved();
@@ -553,6 +564,15 @@ function EditUserModal({
             onChange={(e) => setReferredBy(e.target.value)}
             className="app-input"
             placeholder="Реф-код пригласившего"
+          />
+        </div>
+        <div className="field">
+          <label className="field-label">Реф. баллы</label>
+          <input
+            value={referralPoints}
+            onChange={(e) => setReferralPoints(e.target.value)}
+            className="app-input"
+            inputMode="numeric"
           />
         </div>
         {error && <div className="error-banner">{error}</div>}

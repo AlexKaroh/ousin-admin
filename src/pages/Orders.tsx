@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import {
+  CopyIcon,
   LinkIcon,
   PencilIcon,
   SearchIcon,
@@ -16,6 +18,7 @@ type AdminOrderUser = {
   last_name: string | null;
   telegram_id: string;
   photo_url: string | null;
+  referral_points?: number;
 };
 
 type AdminOrder = {
@@ -29,6 +32,9 @@ type AdminOrder = {
   size: number | null;
   price: number;
   comment: string | null;
+  china_code: string | null;
+  payment_status: string;
+  admin_note: string | null;
   order_date: string;
   request_status: string;
   order_status: string;
@@ -61,6 +67,23 @@ const ORDER_STATUSES = [
   "Готов к выдаче",
   "Выдан",
 ] as const;
+
+const PAYMENT_OPTIONS = [
+  { value: "unpaid", label: "Не оплачен" },
+  { value: "partial", label: "Частично" },
+  { value: "paid", label: "Оплачен" },
+] as const;
+
+/** Показ «итого в $» в модалке (как на референсе), без влияния на сохранение */
+const CNY_PER_USD_DISPLAY = 6.6;
+
+function requestStatusBadgeText(status: string): string {
+  const s = status.trim().toLowerCase();
+  if (s === "новые") return "НОВАЯ";
+  if (s === "исполнена") return "ПРИНЯТА";
+  if (s === "отклонена") return "ОТКЛОНЕНА";
+  return status.toUpperCase().slice(0, 8);
+}
 
 function statusTone(status: string): "blue" | "emerald" | "rose" | "amber" {
   const s = status.trim().toLowerCase();
@@ -95,6 +118,103 @@ const PAGE_SIZE = 20;
 function hasProductImage(orderPhoto: string | null | undefined) {
   const value = String(orderPhoto || "").trim();
   return Boolean(value) && !value.includes("order-no-product-photo");
+}
+
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function CopyTextButton({
+  text,
+  variant = "row",
+  ariaLabel,
+}: {
+  text: string;
+  variant?: "row" | "icon";
+  ariaLabel?: string;
+}) {
+  const trimmed = text.trim();
+  const [copied, setCopied] = useState(false);
+  if (!trimmed) return null;
+  const label = ariaLabel ?? "Скопировать в буфер обмена";
+
+  async function onCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    const ok = await writeClipboard(trimmed);
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  }
+
+  if (variant === "icon") {
+    return (
+      <button
+        type="button"
+        className={`order-copy-btn order-copy-btn--icon${copied ? " is-copied" : ""}`}
+        onClick={onCopy}
+        aria-label={label}
+      >
+        {copied ? "✓" : <CopyIcon size={15} />}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`order-copy-btn order-copy-btn--row${copied ? " is-copied" : ""}`}
+      onClick={onCopy}
+      aria-label={label}
+    >
+      <span className="order-copy-btn__glyph" aria-hidden>
+        {copied ? "✓" : <CopyIcon size={14} />}
+      </span>
+      <span>{copied ? "Скопировано" : "Копировать"}</span>
+    </button>
+  );
+}
+
+function OrderMobileFieldRow({
+  label,
+  value,
+  copyText,
+}: {
+  label: string;
+  value: ReactNode;
+  copyText?: string | null;
+}) {
+  const text = (copyText ?? "").trim();
+  return (
+    <div className="order-mobile-field-row">
+      <div className="order-mobile-field-body">
+        <span className="order-info-label">{label}</span>
+        <div className="order-mobile-field-value">{value}</div>
+      </div>
+      {text ? (
+        <CopyTextButton text={text} variant="row" ariaLabel={`Скопировать: ${label}`} />
+      ) : null}
+    </div>
+  );
 }
 
 export default function OrdersPage() {
@@ -226,9 +346,9 @@ export default function OrdersPage() {
   }, [data]);
 
   return (
-    <div>
+    <div className="orders-page-dark">
       <PageHeader
-        title="Заказы"
+        title="Заявки"
         subtitle="Управляйте общим статусом заявки и внутренним статусом заказа."
       />
 
@@ -314,6 +434,8 @@ export default function OrdersPage() {
                 onStatusChange={(requestStatus, orderStatus) =>
                   handleQuickStatus(order, requestStatus, orderStatus)
                 }
+                onAccept={() => handleQuickStatus(order, "Исполнена", order.order_status)}
+                onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
                 onGenerateImage={() => handleGenerateImage(order)}
@@ -327,6 +449,7 @@ export default function OrdersPage() {
                 <th style={{ minWidth: 220 }}>Товар</th>
                 <th>Пользователь</th>
                 <th>Цена</th>
+                <th>Трек CN</th>
                 <th>Размер</th>
                 <th>Заявка</th>
                 <th>Статус внутри</th>
@@ -338,14 +461,14 @@ export default function OrdersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="empty-state">
+                  <td colSpan={10} className="empty-state">
                     Загружаем заказы…
                   </td>
                 </tr>
               )}
               {!loading && data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="empty-state">
+                  <td colSpan={10} className="empty-state">
                     Заказы не найдены
                   </td>
                 </tr>
@@ -401,6 +524,9 @@ export default function OrdersPage() {
                       )}
                     </td>
                     <td data-label="Цена">{order.price.toLocaleString("ru-RU")} ¥</td>
+                    <td data-label="Трек CN" className="font-mono muted" style={{ fontSize: 12 }}>
+                      {order.china_code?.trim() || "—"}
+                    </td>
                     <td data-label="Размер">{order.size ?? "—"}</td>
                     <td data-label="Заявка">
                       <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
@@ -531,6 +657,8 @@ function OrderMobileCard({
   expanded,
   onToggleExpand,
   onStatusChange,
+  onAccept,
+  onReject,
   onEdit,
   onDelete,
   onGenerateImage,
@@ -542,6 +670,8 @@ function OrderMobileCard({
   expanded: boolean;
   onToggleExpand: () => void;
   onStatusChange: (requestStatus: string, orderStatus: string) => void;
+  onAccept: () => void;
+  onReject: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onGenerateImage: () => void;
@@ -550,7 +680,6 @@ function OrderMobileCard({
   const [swipeOpen, setSwipeOpen] = useState<"edit" | "delete" | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
-  const shortId = order.id ? `#${order.id.slice(0, 8)}` : "";
   const userName = order.user
     ? order.user.username
       ? `@${order.user.username}`
@@ -619,7 +748,7 @@ function OrderMobileCard({
         {deleting ? <span className="spinner" /> : "×"}
       </button>
       <div
-        className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}
+        className={`order-card order-card--dark tone-${tone} ${expanded ? "is-open" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -627,54 +756,130 @@ function OrderMobileCard({
         style={{ transform: `translateX(${swipeX}px)` }}
       >
       <div className="order-card-collapsed">
-        <div className="order-card-preview">
+        <div className="order-card-dark-main">
+          <div className="order-card-dark-top">
+            <span className="order-card-dark-date">{formatDate(order.order_date)}</span>
+            <span className="order-card-dark-badge">{requestStatusBadgeText(order.request_status)}</span>
+          </div>
+          <div className="order-card-dark-user">{displayUserName}</div>
+          <div className="order-card-dark-price-row">
+            <span className="order-card-dark-price">{order.price.toLocaleString("ru-RU")} ¥</span>
+            {order.size != null ? (
+              <span className="order-card-dark-size">Размер: {order.size}</span>
+            ) : null}
+          </div>
+          <div className="order-card-dark-title">{order.model || "Заказ"}</div>
+          <div className="order-card-dark-actions">
+            <button
+              type="button"
+              className="order-card-dark-btn order-card-dark-btn--accept"
+              disabled={saving}
+              onClick={onAccept}
+            >
+              + Принять
+            </button>
+            <button
+              type="button"
+              className="order-card-dark-btn order-card-dark-btn--reject"
+              disabled={saving}
+              onClick={onReject}
+            >
+              ✕ Отклонить
+            </button>
+          </div>
+          <div className="order-card-dark-expand-row">
+            <button
+              type="button"
+              className={`order-card-chevron order-card-chevron--dark ${expanded ? "is-open" : ""}`}
+              onClick={onToggleExpand}
+              aria-label={expanded ? "Свернуть заявку" : "Развернуть заявку"}
+              aria-expanded={expanded}
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                  d="M5 8l5 5 5-5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="order-card-dark-thumb">
           {hasProductImage(order.order_photo) ? (
-            <img src={order.order_photo} alt={order.model || "Товар"} />
+            <img src={order.order_photo} alt="" />
           ) : (
             <span>Фото</span>
           )}
-        </div>
-        <div className="order-card-head">
-          <div className="order-card-title">{order.model || "Заказ"}</div>
-          <div className="order-card-sub order-card-id-text">{shortId || "—"}</div>
-          <div className="order-card-user-inline">
-            <div className="order-card-user-avatar">
-              {order.user?.photo_url ? (
-                <img src={order.user.photo_url} alt="" />
-              ) : (
-                userInitial
-              )}
-            </div>
-            <span className="order-card-user-name">{displayUserName}</span>
-          </div>
-        </div>
-        <div className="order-card-aside">
-          <div className="order-price-pill">{order.price.toLocaleString("ru-RU")} ¥</div>
-          <button
-            type="button"
-            className={`order-card-chevron ${expanded ? "is-open" : ""}`}
-            onClick={onToggleExpand}
-            aria-label={expanded ? "Свернуть заявку" : "Развернуть заявку"}
-            aria-expanded={expanded}
-          >
-            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path
-                d="M5 8l5 5 5-5"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
         </div>
       </div>
 
       <div className="order-card-expand">
         <div className="order-card-expand-inner">
+          <div className="order-mobile-copy-stack">
+            <OrderMobileFieldRow label="ID заявки" value={order.id} copyText={order.id} />
+            <OrderMobileFieldRow
+              label="Название"
+              value={order.model?.trim() ? order.model : "—"}
+              copyText={order.model?.trim() ? order.model : null}
+            />
+            <OrderMobileFieldRow
+              label="Цена"
+              value={`${order.price.toLocaleString("ru-RU")} ¥`}
+              copyText={`${order.price} ¥`}
+            />
+            <OrderMobileFieldRow
+              label="Тип доставки"
+              value={order.delivery_type || "—"}
+              copyText={order.delivery_type?.trim() ? order.delivery_type : null}
+            />
+            <OrderMobileFieldRow
+              label="Оплачено"
+              value={order.is_paid ? "Да" : "Нет"}
+              copyText={order.is_paid ? "Да" : "Нет"}
+            />
+            <OrderMobileFieldRow
+              label="Статус оплаты"
+              value={
+                PAYMENT_OPTIONS.find((p) => p.value === order.payment_status)?.label ??
+                order.payment_status
+              }
+              copyText={
+                PAYMENT_OPTIONS.find((p) => p.value === order.payment_status)?.label ??
+                order.payment_status
+              }
+            />
+            <OrderMobileFieldRow
+              label="Трек Китай"
+              value={order.china_code?.trim() ? order.china_code : "—"}
+              copyText={order.china_code?.trim() ? order.china_code : null}
+            />
+            <OrderMobileFieldRow
+              label="Заметка (админ)"
+              value={order.admin_note?.trim() ? order.admin_note : "—"}
+              copyText={order.admin_note?.trim() ? order.admin_note : null}
+            />
+            {order.user && typeof order.user.referral_points === "number" ? (
+              <OrderMobileFieldRow
+                label="Реф. баллы"
+                value={String(order.user.referral_points)}
+                copyText={String(order.user.referral_points)}
+              />
+            ) : null}
+          </div>
+
           <div className="order-card-info-grid">
             <div className="order-info-tile order-card-status">
-              <span className="order-info-label">Заявка</span>
+              <div className="order-info-tile-head">
+                <span className="order-info-label">Заявка</span>
+                <CopyTextButton
+                  text={order.request_status}
+                  variant="icon"
+                  ariaLabel="Скопировать статус заявки"
+                />
+              </div>
               <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
                 {REQUEST_STATUSES.map((s) => (
                   <button
@@ -691,7 +896,14 @@ function OrderMobileCard({
               </div>
             </div>
             <div className="order-info-tile order-card-status">
-              <span className="order-info-label">Статус внутри</span>
+              <div className="order-info-tile-head">
+                <span className="order-info-label">Статус внутри</span>
+                <CopyTextButton
+                  text={order.order_status}
+                  variant="icon"
+                  ariaLabel="Скопировать статус заказа"
+                />
+              </div>
               <select
                 className="app-input"
                 value={order.order_status}
@@ -709,40 +921,74 @@ function OrderMobileCard({
               </select>
             </div>
             <div className="order-info-tile order-info-size" style={{ gridColumn: "1 / -1" }}>
-              <span className="order-info-label">Размер</span>
+              <div className="order-info-tile-head">
+                <span className="order-info-label">Размер</span>
+                <CopyTextButton
+                  text={order.size != null ? String(order.size) : ""}
+                  variant="icon"
+                  ariaLabel="Скопировать размер"
+                />
+              </div>
               <span className="order-info-value">{order.size ?? "—"}</span>
             </div>
           </div>
 
           {order.user && (
-            <div className="order-card-user">
-              <div className="order-card-user-avatar">
-                {order.user.photo_url ? (
-                  <img src={order.user.photo_url} alt="" />
-                ) : (
-                  userInitial
-                )}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="order-card-user-name">{userName}</div>
-                <div className="order-card-user-tg font-mono">
-                  tg: {order.user.telegram_id}
+            <>
+              <div className="order-card-user">
+                <div className="order-card-user-avatar">
+                  {order.user.photo_url ? (
+                    <img src={order.user.photo_url} alt="" />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="order-card-user-name">{userName}</div>
+                  <div className="order-card-user-tg font-mono">
+                    tg: {order.user.telegram_id}
+                  </div>
                 </div>
               </div>
-            </div>
+              <div className="order-mobile-copy-stack order-mobile-copy-stack--tight">
+                <CopyTextButton
+                  text={userDisplay(order.user)}
+                  variant="row"
+                  ariaLabel="Скопировать имя или @username"
+                />
+                <CopyTextButton
+                  text={String(order.user.telegram_id)}
+                  variant="row"
+                  ariaLabel="Скопировать Telegram ID"
+                />
+              </div>
+            </>
           )}
 
-          {order.order_url && (
-            <a
-              className="order-card-link"
-              href={order.order_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <LinkIcon />
-              <span>Открыть товар</span>
-            </a>
-          )}
+          {order.order_url ? (
+            <div className="order-mobile-link-block">
+              <a
+                className="order-card-link"
+                href={order.order_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <LinkIcon />
+                <span>Открыть товар</span>
+              </a>
+              <CopyTextButton text={order.order_url} variant="row" ariaLabel="Скопировать ссылку на товар" />
+            </div>
+          ) : null}
+
+          {hasProductImage(order.order_photo) ? (
+            <OrderMobileFieldRow
+              label="Фото (URL)"
+              value={
+                <span className="order-mobile-field-mono">{order.order_photo}</span>
+              }
+              copyText={order.order_photo}
+            />
+          ) : null}
 
           <button
             type="button"
@@ -759,15 +1005,25 @@ function OrderMobileCard({
             </span>
           </button>
 
-          {order.comment && (
+          {order.comment ? (
             <div className="order-card-comment">
-              <span className="order-card-comment-label">Комментарий</span>
+              <div className="order-card-comment-head">
+                <span className="order-card-comment-label">Комментарий</span>
+                <CopyTextButton text={order.comment} variant="icon" ariaLabel="Скопировать комментарий" />
+              </div>
               {order.comment}
             </div>
-          )}
+          ) : null}
 
           <div className="order-card-foot">
-            <span>{formatDate(order.order_date)}</span>
+            <div className="order-card-foot-date">
+              <span>{formatDate(order.order_date)}</span>
+              <CopyTextButton
+                text={formatDate(order.order_date)}
+                variant="icon"
+                ariaLabel="Скопировать дату"
+              />
+            </div>
             <div className="row-actions">
               <button
                 type="button"
@@ -811,8 +1067,11 @@ function EditOrderModal({
   const [size, setSize] = useState("");
   const [requestStatus, setRequestStatus] = useState("");
   const [status, setStatus] = useState("");
-  const [isPaid, setIsPaid] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
   const [comment, setComment] = useState("");
+  const [chinaCode, setChinaCode] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [referralPoints, setReferralPoints] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -825,10 +1084,25 @@ function EditOrderModal({
     setSize(order.size == null ? "" : String(order.size));
     setRequestStatus(order.request_status || "");
     setStatus(order.order_status || "");
-    setIsPaid(Boolean(order.is_paid));
+    setPaymentStatus(order.payment_status || "unpaid");
     setComment(order.comment || "");
+    setChinaCode(order.china_code ?? "");
+    setAdminNote(order.admin_note ?? "");
+    setReferralPoints(
+      order.user?.referral_points != null ? String(order.user.referral_points) : "0",
+    );
     setError("");
   }, [order]);
+
+  const priceNum = useMemo(() => {
+    const n = Number(String(price).replace(",", ".").trim());
+    return Number.isFinite(n) ? n : NaN;
+  }, [price]);
+
+  const totalUsdDisplay = useMemo(() => {
+    if (!Number.isFinite(priceNum) || priceNum <= 0) return "—";
+    return `$${Math.round(priceNum / CNY_PER_USD_DISPLAY)}`;
+  }, [priceNum]);
 
   if (!order) return null;
 
@@ -844,17 +1118,33 @@ function EditOrderModal({
         delivery_type: deliveryType.trim(),
         request_status: requestStatus.trim(),
         order_status: status.trim(),
-        is_paid: isPaid,
+        payment_status: paymentStatus,
         comment,
+        china_code: chinaCode.trim() || null,
+        admin_note: adminNote.trim() || null,
       };
-      const priceNum = Number(price);
-      if (Number.isFinite(priceNum)) body.price = priceNum;
+      const p = Number(String(price).replace(",", "."));
+      if (Number.isFinite(p)) body.price = p;
       body.size = size.trim() === "" ? null : size.trim();
 
       await apiFetch(`/admin/orders/${order.id}`, {
         method: "PATCH",
         body,
       });
+
+        if (order.user) {
+          const rp = Math.max(
+            0,
+            Math.round(Number(String(referralPoints).replace(",", ".").trim()) || 0),
+          );
+          if (rp !== (order.user.referral_points ?? 0)) {
+            await apiFetch(`/admin/users/${order.user.id}`, {
+              method: "PATCH",
+              body: { referral_points: rp },
+            });
+          }
+        }
+
       onSaved();
     } catch (err) {
       if (err instanceof Error) setError(err.message);
@@ -866,17 +1156,18 @@ function EditOrderModal({
   return (
     <Modal
       open={Boolean(order)}
-      title="Редактирование заказа"
+      variant="dark"
+      title={model.trim() || "Заявка"}
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="app-btn app-btn-ghost">
+          <button type="button" onClick={onClose} className="eo-footer-btn eo-footer-btn--ghost">
             Отмена
           </button>
           <button
             type="submit"
             form="edit-order-form"
-            className="app-btn app-btn-primary"
+            className="eo-footer-btn eo-footer-btn--primary"
             disabled={saving}
           >
             {saving ? <span className="spinner" /> : null}
@@ -885,68 +1176,139 @@ function EditOrderModal({
         </>
       }
     >
-      <form
-        id="edit-order-form"
-        onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
-      >
-        <div className="field">
-          <label className="field-label">Название товара</label>
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="app-input"
-            maxLength={200}
+      <form id="edit-order-form" className="eo-form" onSubmit={handleSubmit}>
+        <div className="eo-field">
+          <label className="eo-label">Описание</label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="eo-input eo-textarea"
+            placeholder="Размер, цвет, особенности…"
+            rows={3}
           />
         </div>
-        <div className="field">
-          <label className="field-label">Ссылка на товар</label>
-          <input
-            value={orderUrl}
-            onChange={(e) => setOrderUrl(e.target.value)}
-            className="app-input"
-            maxLength={500}
-          />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div className="field">
-            <label className="field-label">Цена (¥)</label>
+
+        <div className="eo-field">
+          <label className="eo-label">Ссылка на товар</label>
+          <div className="eo-input-with-icon">
+            <LinkIcon className="eo-input-icon" size={16} />
             <input
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="app-input"
-              inputMode="decimal"
+              value={orderUrl}
+              onChange={(e) => setOrderUrl(e.target.value)}
+              className="eo-input eo-input--inset"
+              maxLength={500}
             />
           </div>
-          <div className="field">
-            <label className="field-label">Размер</label>
+        </div>
+
+        <div className="eo-field">
+          <label className="eo-label">Трек Китай (china_code)</label>
+          <input
+            value={chinaCode}
+            onChange={(e) => setChinaCode(e.target.value)}
+            className="eo-input"
+            placeholder="Трек-номер из Китая"
+            maxLength={120}
+          />
+        </div>
+
+        <div className="eo-field">
+          <label className="eo-label">Цена в юанях (¥)</label>
+          <input
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="eo-input"
+            inputMode="decimal"
+          />
+        </div>
+
+        <div className="eo-total-row">
+          <span className="eo-label eo-label--inline">Итого (автоматически)</span>
+          <span className="eo-total-value">{totalUsdDisplay}</span>
+        </div>
+        <p className="eo-hint">
+          Курс: {CNY_PER_USD_DISPLAY} ¥/$ · формула: цена ¥ / курс (только подсказка)
+        </p>
+
+        <div className="eo-field">
+          <label className="eo-label">Статус оплаты</label>
+          <div className="eo-segment" role="group" aria-label="Статус оплаты">
+            {PAYMENT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`eo-segment-btn eo-segment-btn--${opt.value}${paymentStatus === opt.value ? " is-active" : ""}`}
+                onClick={() => setPaymentStatus(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="eo-field">
+          <label className="eo-label">Заметка</label>
+          <textarea
+            value={adminNote}
+            onChange={(e) => setAdminNote(e.target.value)}
+            className="eo-input eo-textarea"
+            placeholder="Служебная заметка…"
+            rows={3}
+          />
+        </div>
+
+        {order.user ? (
+          <div className="eo-field">
+            <label className="eo-label">Реф. баллы пользователя</label>
             <input
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              className="app-input"
+              value={referralPoints}
+              onChange={(e) => setReferralPoints(e.target.value)}
+              className="eo-input"
               inputMode="numeric"
             />
           </div>
+        ) : null}
+
+        <div className="eo-field">
+          <label className="eo-label">Название товара (модель)</label>
+          <input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="eo-input"
+            maxLength={200}
+          />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div className="field">
-            <label className="field-label">Тип доставки</label>
+
+        <div className="eo-two">
+          <div className="eo-field">
+            <label className="eo-label">Размер</label>
+            <input
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              className="eo-input"
+              inputMode="numeric"
+            />
+          </div>
+          <div className="eo-field">
+            <label className="eo-label">Тип доставки</label>
             <input
               value={deliveryType}
               onChange={(e) => setDeliveryType(e.target.value)}
-              className="app-input"
+              className="eo-input"
             />
           </div>
-          <div className="field">
-            <label className="field-label">Статус заявки</label>
+        </div>
+
+        <div className="eo-two">
+          <div className="eo-field">
+            <label className="eo-label">Статус заявки</label>
             <select
               value={requestStatus}
               onChange={(e) => setRequestStatus(e.target.value)}
-              className="app-input"
+              className="eo-input eo-select"
             >
-              {!REQUEST_STATUSES.includes(requestStatus as (typeof REQUEST_STATUSES)[number]) && requestStatus && (
-                <option value={requestStatus}>{requestStatus}</option>
-              )}
+              {!REQUEST_STATUSES.includes(requestStatus as (typeof REQUEST_STATUSES)[number]) &&
+                requestStatus && <option value={requestStatus}>{requestStatus}</option>}
               {REQUEST_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -954,14 +1316,9 @@ function EditOrderModal({
               ))}
             </select>
           </div>
-        </div>
-        <div className="field">
-            <label className="field-label">Статус внутри</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="app-input"
-            >
+          <div className="eo-field">
+            <label className="eo-label">Статус внутри</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="eo-input eo-select">
               {!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number]) && status && (
                 <option value={status}>{status}</option>
               )}
@@ -971,35 +1328,10 @@ function EditOrderModal({
                 </option>
               ))}
             </select>
+          </div>
         </div>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 12px",
-            border: "1px solid rgba(15,23,42,0.12)",
-            borderRadius: 14,
-            background: "rgba(248,250,255,0.85)",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isPaid}
-            onChange={(e) => setIsPaid(e.target.checked)}
-          />
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Заказ оплачен</span>
-        </label>
-        <div className="field">
-          <label className="field-label">Комментарий</label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="app-input"
-            style={{ minHeight: 100 }}
-          />
-        </div>
-        {error && <div className="error-banner">{error}</div>}
+
+        {error ? <div className="eo-error">{error}</div> : null}
       </form>
     </Modal>
   );
