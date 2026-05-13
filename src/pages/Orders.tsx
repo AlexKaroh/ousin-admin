@@ -346,7 +346,7 @@ export default function OrdersPage() {
   }, [data]);
 
   return (
-    <div className="orders-page-dark">
+    <>
       <PageHeader
         title="Заявки"
         subtitle="Управляйте общим статусом заявки и внутренним статусом заказа."
@@ -366,7 +366,7 @@ export default function OrdersPage() {
               position: "absolute",
               left: 14,
               top: 13,
-              color: "#94a3b8",
+              color: "var(--text-soft)",
               pointerEvents: "none",
             }}
           >
@@ -491,7 +491,7 @@ export default function OrdersPage() {
                               display: "inline-flex",
                               alignItems: "center",
                               gap: 4,
-                              color: "#2563eb",
+                              color: "var(--primary)",
                               fontSize: 12,
                             }}
                           >
@@ -645,7 +645,7 @@ export default function OrdersPage() {
           await load();
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -748,7 +748,7 @@ function OrderMobileCard({
         {deleting ? <span className="spinner" /> : "×"}
       </button>
       <div
-        className={`order-card order-card--dark tone-${tone} ${expanded ? "is-open" : ""}`}
+        className={`order-card tone-${tone} ${expanded ? "is-open" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -756,23 +756,23 @@ function OrderMobileCard({
         style={{ transform: `translateX(${swipeX}px)` }}
       >
       <div className="order-card-collapsed">
-        <div className="order-card-dark-main">
-          <div className="order-card-dark-top">
-            <span className="order-card-dark-date">{formatDate(order.order_date)}</span>
-            <span className="order-card-dark-badge">{requestStatusBadgeText(order.request_status)}</span>
+        <div className="order-card-hero-main">
+          <div className="order-card-hero-top">
+            <span className="order-card-hero-date">{formatDate(order.order_date)}</span>
+            <span className="order-card-hero-badge">{requestStatusBadgeText(order.request_status)}</span>
           </div>
-          <div className="order-card-dark-user">{displayUserName}</div>
-          <div className="order-card-dark-price-row">
-            <span className="order-card-dark-price">{order.price.toLocaleString("ru-RU")} ¥</span>
+          <div className="order-card-hero-user">{displayUserName}</div>
+          <div className="order-card-hero-price-row">
+            <span className="order-card-hero-price">{order.price.toLocaleString("ru-RU")} ¥</span>
             {order.size != null ? (
-              <span className="order-card-dark-size">Размер: {order.size}</span>
+              <span className="order-card-hero-size">Размер: {order.size}</span>
             ) : null}
           </div>
-          <div className="order-card-dark-title">{order.model || "Заказ"}</div>
-          <div className="order-card-dark-actions">
+          <div className="order-card-hero-title">{order.model || "Заказ"}</div>
+          <div className="order-card-hero-actions">
             <button
               type="button"
-              className="order-card-dark-btn order-card-dark-btn--accept"
+              className="order-card-hero-btn order-card-hero-btn--accept"
               disabled={saving}
               onClick={onAccept}
             >
@@ -780,17 +780,17 @@ function OrderMobileCard({
             </button>
             <button
               type="button"
-              className="order-card-dark-btn order-card-dark-btn--reject"
+              className="order-card-hero-btn order-card-hero-btn--reject"
               disabled={saving}
               onClick={onReject}
             >
               ✕ Отклонить
             </button>
           </div>
-          <div className="order-card-dark-expand-row">
+          <div className="order-card-hero-expand-row">
             <button
               type="button"
-              className={`order-card-chevron order-card-chevron--dark ${expanded ? "is-open" : ""}`}
+              className={`order-card-chevron order-card-chevron--hero ${expanded ? "is-open" : ""}`}
               onClick={onToggleExpand}
               aria-label={expanded ? "Свернуть заявку" : "Развернуть заявку"}
               aria-expanded={expanded}
@@ -807,7 +807,7 @@ function OrderMobileCard({
             </button>
           </div>
         </div>
-        <div className="order-card-dark-thumb">
+        <div className="order-card-hero-thumb">
           {hasProductImage(order.order_photo) ? (
             <img src={order.order_photo} alt="" />
           ) : (
@@ -840,34 +840,6 @@ function OrderMobileCard({
               value={order.is_paid ? "Да" : "Нет"}
               copyText={order.is_paid ? "Да" : "Нет"}
             />
-            <OrderMobileFieldRow
-              label="Статус оплаты"
-              value={
-                PAYMENT_OPTIONS.find((p) => p.value === order.payment_status)?.label ??
-                order.payment_status
-              }
-              copyText={
-                PAYMENT_OPTIONS.find((p) => p.value === order.payment_status)?.label ??
-                order.payment_status
-              }
-            />
-            <OrderMobileFieldRow
-              label="Трек Китай"
-              value={order.china_code?.trim() ? order.china_code : "—"}
-              copyText={order.china_code?.trim() ? order.china_code : null}
-            />
-            <OrderMobileFieldRow
-              label="Заметка (админ)"
-              value={order.admin_note?.trim() ? order.admin_note : "—"}
-              copyText={order.admin_note?.trim() ? order.admin_note : null}
-            />
-            {order.user && typeof order.user.referral_points === "number" ? (
-              <OrderMobileFieldRow
-                label="Реф. баллы"
-                value={String(order.user.referral_points)}
-                copyText={String(order.user.referral_points)}
-              />
-            ) : null}
           </div>
 
           <div className="order-card-info-grid">
