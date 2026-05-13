@@ -904,16 +904,28 @@ select.app-input {
   line-height: 1;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   cursor: pointer;
+  z-index: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s ease;
+}
+
+.order-card-swipe.order-card-swipe--expand-cover .order-card-swipe-edit,
+.order-card-swipe.order-card-swipe--expand-cover .order-card-swipe-delete {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.92);
+  pointer-events: none;
 }
 
 .order-card-swipe-delete {
-  right: 0;
+  right: 4px;
+  bottom: 5px;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   font-size: 28px;
 }
 
 .order-card-swipe-edit {
-  left: 0;
+  left: 4px;
+  bottom: 5px;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
   font-size: 18px;
 }
@@ -929,11 +941,8 @@ select.app-input {
   overflow: hidden;
   border-radius: 16px;
   border: 1px solid var(--border-strong);
-  background: linear-gradient(
-    168deg,
-    rgba(32, 32, 36, 0.98) 0%,
-    rgba(14, 14, 16, 0.99) 100%
-  );
+  /* Строго непрозрачный фон — под карточкой кнопки свайпа */
+  background: linear-gradient(168deg, #1c1c20 0%, #161618 100%);
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.42);
   padding: 0;
   display: flex;
@@ -942,7 +951,7 @@ select.app-input {
   touch-action: pan-y;
   transition: transform 220ms ease, box-shadow 220ms ease;
   will-change: transform;
-  z-index: 1;
+  z-index: 2;
 }
 
 .order-card-swipe.is-swiped .order-card {
@@ -951,38 +960,22 @@ select.app-input {
 
 .order-card.tone-blue {
   box-shadow: inset 3px 0 0 0 #3b82f6, 0 10px 36px rgba(0, 0, 0, 0.42);
-  background: linear-gradient(
-    168deg,
-    rgba(30, 58, 138, 0.28) 0%,
-    rgba(14, 14, 16, 0.98) 52%
-  );
+  background: linear-gradient(168deg, #1e3a5f 0%, #161618 55%);
 }
 
 .order-card.tone-emerald {
   box-shadow: inset 3px 0 0 0 #34d399, 0 10px 36px rgba(0, 0, 0, 0.42);
-  background: linear-gradient(
-    168deg,
-    rgba(6, 78, 59, 0.32) 0%,
-    rgba(14, 14, 16, 0.98) 52%
-  );
+  background: linear-gradient(168deg, #153028 0%, #161618 55%);
 }
 
 .order-card.tone-rose {
   box-shadow: inset 3px 0 0 0 #fb7185, 0 10px 36px rgba(0, 0, 0, 0.42);
-  background: linear-gradient(
-    168deg,
-    rgba(88, 28, 28, 0.32) 0%,
-    rgba(14, 14, 16, 0.98) 52%
-  );
+  background: linear-gradient(168deg, #3f1d24 0%, #161618 55%);
 }
 
 .order-card.tone-amber {
   box-shadow: inset 3px 0 0 0 #fbbf24, 0 10px 36px rgba(0, 0, 0, 0.42);
-  background: linear-gradient(
-    168deg,
-    rgba(69, 52, 8, 0.36) 0%,
-    rgba(14, 14, 16, 0.98) 52%
-  );
+  background: linear-gradient(168deg, #3a2e12 0%, #161618 55%);
 }
 
 .order-card::before,
@@ -1270,7 +1263,7 @@ select.app-input {
 }
 
 .order-info-tile {
-  background: rgba(20, 20, 22, 0.92);
+  background: #1a1a1d;
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   padding: 8px 9px;
@@ -1351,11 +1344,11 @@ select.app-input {
 
 .order-mobile-field-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 8px 10px;
-  background: rgba(20, 20, 22, 0.92);
+  background: #1a1a1d;
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   box-shadow: none;
@@ -1389,7 +1382,7 @@ select.app-input {
   gap: 5px;
   font-weight: 800;
   border: 1px solid var(--border-strong);
-  background: rgba(26, 26, 29, 0.95);
+  background: #222226;
   color: var(--text-muted);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -1419,7 +1412,7 @@ select.app-input {
 }
 
 .order-copy-btn:hover {
-  background: rgba(39, 39, 42, 0.98);
+  background: #2a2a2f;
   border-color: rgba(255, 255, 255, 0.12);
   color: var(--text);
 }
@@ -1433,10 +1426,24 @@ select.app-input {
 .order-mobile-link-block {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.order-mobile-user-copy {
+  margin-top: 8px;
+}
+
+.order-mobile-user-copy .order-copy-btn--row {
+  width: 100%;
+  justify-content: center;
 }
 
 .order-mobile-link-block .order-card-link {
+  width: 100%;
+  justify-content: center;
+}
+
+.order-mobile-link-block .order-copy-btn--row {
   width: 100%;
   justify-content: center;
 }
@@ -1502,6 +1509,7 @@ select.app-input {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: #161618;
 }
 
 .order-card.is-open .order-card-expand {
@@ -1559,7 +1567,7 @@ select.app-input {
 .order-card-comment {
   position: relative;
   z-index: 1;
-  background: rgba(20, 20, 22, 0.92);
+  background: #1a1a1d;
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   padding: 9px 11px;
@@ -1601,7 +1609,7 @@ select.app-input {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(20, 20, 22, 0.92);
+  background: #1a1a1d;
   border-radius: 14px;
   border: 1px solid var(--border-strong);
   padding: 7px 9px;

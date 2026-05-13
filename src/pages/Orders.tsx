@@ -60,7 +60,7 @@ type ProductImageResponse = {
   title?: string;
 };
 
-const REQUEST_STATUSES = ["Новые", "Исполнена", "Отклонена"] as const;
+const REQUEST_STATUSES = ["Новые", "Принята", "Исполнена", "Отклонена"] as const;
 const ORDER_STATUSES = [
   "В обработке",
   "В пути по Китаю",
@@ -80,7 +80,8 @@ const CNY_PER_USD_DISPLAY = 6.6;
 function requestStatusBadgeText(status: string): string {
   const s = status.trim().toLowerCase();
   if (s === "новые") return "НОВАЯ";
-  if (s === "исполнена") return "ПРИНЯТА";
+  if (s === "принята") return "ПРИНЯТА";
+  if (s === "исполнена") return "ЗАВЕРШЕНА";
   if (s === "отклонена") return "ОТКЛОНЕНА";
   return status.toUpperCase().slice(0, 8);
 }
@@ -88,7 +89,8 @@ function requestStatusBadgeText(status: string): string {
 function statusTone(status: string): "blue" | "emerald" | "rose" | "amber" {
   const s = status.trim().toLowerCase();
   if (s === "новые") return "blue";
-  if (s === "исполнена") return "emerald";
+  if (s === "принята") return "emerald";
+  if (s === "исполнена") return "amber";
   if (s === "отклонена") return "rose";
   return "amber";
 }
@@ -147,10 +149,15 @@ function CopyTextButton({
   text,
   variant = "row",
   ariaLabel,
+  rowLabel = "Копировать",
+  rowCopiedLabel = "Скопировано",
 }: {
   text: string;
   variant?: "row" | "icon";
   ariaLabel?: string;
+  /** Подпись на широкой кнопке до копирования */
+  rowLabel?: string;
+  rowCopiedLabel?: string;
 }) {
   const trimmed = text.trim();
   const [copied, setCopied] = useState(false);
@@ -189,7 +196,7 @@ function CopyTextButton({
       <span className="order-copy-btn__glyph" aria-hidden>
         {copied ? "✓" : <CopyIcon size={14} />}
       </span>
-      <span>{copied ? "Скопировано" : "Копировать"}</span>
+      <span>{copied ? rowCopiedLabel : rowLabel}</span>
     </button>
   );
 }
@@ -211,7 +218,11 @@ function OrderMobileFieldRow({
         <div className="order-mobile-field-value">{value}</div>
       </div>
       {text ? (
-        <CopyTextButton text={text} variant="row" ariaLabel={`Скопировать: ${label}`} />
+        <CopyTextButton
+          text={text}
+          variant="icon"
+          ariaLabel={`Скопировать: ${label}`}
+        />
       ) : null}
     </div>
   );
@@ -434,7 +445,7 @@ export default function OrdersPage() {
                 onStatusChange={(requestStatus, orderStatus) =>
                   handleQuickStatus(order, requestStatus, orderStatus)
                 }
-                onAccept={() => handleQuickStatus(order, "Исполнена", order.order_status)}
+                onAccept={() => handleQuickStatus(order, "Принята", order.order_status)}
                 onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
@@ -728,8 +739,13 @@ function OrderMobileCard({
     setDragOffset(0);
   }
 
+  const swipeCover =
+    expanded && !swipeOpen ? " order-card-swipe--expand-cover" : "";
+
   return (
-    <div className={`order-card-swipe ${swipeOpen ? `is-swiped is-swiped-${swipeOpen}` : ""}`}>
+    <div
+      className={`order-card-swipe${swipeOpen ? ` is-swiped is-swiped-${swipeOpen}` : ""}${swipeCover}`}
+    >
       <button
         type="button"
         className="order-card-swipe-edit"
@@ -846,11 +862,6 @@ function OrderMobileCard({
             <div className="order-info-tile order-card-status">
               <div className="order-info-tile-head">
                 <span className="order-info-label">Заявка</span>
-                <CopyTextButton
-                  text={order.request_status}
-                  variant="icon"
-                  ariaLabel="Скопировать статус заявки"
-                />
               </div>
               <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
                 {REQUEST_STATUSES.map((s) => (
@@ -870,11 +881,6 @@ function OrderMobileCard({
             <div className="order-info-tile order-card-status">
               <div className="order-info-tile-head">
                 <span className="order-info-label">Статус внутри</span>
-                <CopyTextButton
-                  text={order.order_status}
-                  variant="icon"
-                  ariaLabel="Скопировать статус заказа"
-                />
               </div>
               <select
                 className="app-input"
@@ -895,11 +901,6 @@ function OrderMobileCard({
             <div className="order-info-tile order-info-size" style={{ gridColumn: "1 / -1" }}>
               <div className="order-info-tile-head">
                 <span className="order-info-label">Размер</span>
-                <CopyTextButton
-                  text={order.size != null ? String(order.size) : ""}
-                  variant="icon"
-                  ariaLabel="Скопировать размер"
-                />
               </div>
               <span className="order-info-value">{order.size ?? "—"}</span>
             </div>
@@ -922,16 +923,13 @@ function OrderMobileCard({
                   </div>
                 </div>
               </div>
-              <div className="order-mobile-copy-stack order-mobile-copy-stack--tight">
+              <div className="order-mobile-user-copy">
                 <CopyTextButton
-                  text={userDisplay(order.user)}
+                  text={`${userName}\nTelegram ID: ${order.user.telegram_id}`}
                   variant="row"
-                  ariaLabel="Скопировать имя или @username"
-                />
-                <CopyTextButton
-                  text={String(order.user.telegram_id)}
-                  variant="row"
-                  ariaLabel="Скопировать Telegram ID"
+                  rowLabel="Контакты"
+                  rowCopiedLabel="Скопировано"
+                  ariaLabel="Скопировать имя и Telegram ID"
                 />
               </div>
             </>
@@ -948,7 +946,13 @@ function OrderMobileCard({
                 <LinkIcon />
                 <span>Открыть товар</span>
               </a>
-              <CopyTextButton text={order.order_url} variant="row" ariaLabel="Скопировать ссылку на товар" />
+              <CopyTextButton
+                text={order.order_url}
+                variant="row"
+                rowLabel="Ссылка"
+                rowCopiedLabel="Скопировано"
+                ariaLabel="Скопировать ссылку на товар"
+              />
             </div>
           ) : null}
 
@@ -990,11 +994,6 @@ function OrderMobileCard({
           <div className="order-card-foot">
             <div className="order-card-foot-date">
               <span>{formatDate(order.order_date)}</span>
-              <CopyTextButton
-                text={formatDate(order.order_date)}
-                variant="icon"
-                ariaLabel="Скопировать дату"
-              />
             </div>
             <div className="row-actions">
               <button
