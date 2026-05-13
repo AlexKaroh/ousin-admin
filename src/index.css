@@ -442,6 +442,62 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* Заявки: фильтры в две строки, без вылезания за экран */
+.toolbar.orders-toolbar {
+  align-items: stretch;
+}
+
+.orders-toolbar-search {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.orders-toolbar-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.orders-toolbar-filters-row {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.orders-toolbar-filters-row--full {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.orders-toolbar-filters-row--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.orders-toolbar-filters-row .app-btn {
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: 13px;
+}
+
+.orders-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.orders-toolbar-actions .app-btn {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
 .app-input {
   height: 42px;
   padding: 0 14px;
@@ -1091,6 +1147,16 @@ select.app-input {
   background: rgba(248, 113, 113, 0.12);
   color: #fecaca;
   border-color: rgba(248, 113, 113, 0.32);
+}
+
+.order-card-hero-btn--terminal:disabled {
+  opacity: 0.68;
+  cursor: default;
+}
+
+.order-card-hero-btn--state-muted:disabled {
+  opacity: 0.62;
+  filter: grayscale(0.2);
 }
 
 .order-card-hero-btn--reject:hover:not(:disabled) {
@@ -2059,6 +2125,11 @@ select.app-input {
   }
   .toolbar > * {
     flex: 1 1 auto;
+  }
+  .toolbar.orders-toolbar > * {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
   }
   .toolbar .app-btn {
     flex: 0 0 auto;

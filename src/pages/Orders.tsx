@@ -61,6 +61,8 @@ type ProductImageResponse = {
 };
 
 const REQUEST_STATUSES = ["Новые", "Принята", "Исполнена", "Отклонена"] as const;
+const REQUEST_FILTER_NEW = REQUEST_STATUSES[0];
+const REQUEST_FILTER_REST = REQUEST_STATUSES.slice(1);
 const ORDER_STATUSES = [
   "В обработке",
   "В пути по Китаю",
@@ -363,57 +365,77 @@ export default function OrdersPage() {
         subtitle="Управляйте общим статусом заявки и внутренним статусом заказа."
       />
 
-      <form className="toolbar" onSubmit={applySearch}>
-        <div style={{ position: "relative", flex: "1 1 280px", maxWidth: 360 }}>
-          <input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Поиск по товару, ссылке, имени, username…"
-            className="app-input"
-            style={{ paddingLeft: 38 }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              left: 14,
-              top: 13,
-              color: "var(--text-soft)",
-              pointerEvents: "none",
-            }}
-          >
-            <SearchIcon size={16} />
-          </span>
-        </div>
-        <div style={{ display: "inline-flex", gap: 6 }}>
-          {REQUEST_STATUSES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={statusFilter === s ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
-              onClick={() => {
-                setPage(0);
-                setStatusFilter(s);
+      <form className="toolbar orders-toolbar" onSubmit={applySearch}>
+        <div className="orders-toolbar-search">
+          <div style={{ position: "relative", width: "100%", minWidth: 0 }}>
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Поиск по товару, ссылке, имени, username…"
+              className="app-input"
+              style={{ paddingLeft: 38 }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                left: 14,
+                top: 13,
+                color: "var(--text-soft)",
+                pointerEvents: "none",
               }}
             >
-              {s}
-            </button>
-          ))}
+              <SearchIcon size={16} />
+            </span>
+          </div>
         </div>
-        <button type="submit" className="app-btn app-btn-primary">
-          Применить
-        </button>
-        <button
-          type="button"
-          className="app-btn app-btn-ghost"
-          onClick={() => {
-            setSearch("");
-            setSearchInput("");
-            setStatusFilter("");
-            setPage(0);
-          }}
-        >
-          Сбросить
-        </button>
+        <div className="orders-toolbar-filters" aria-label="Фильтр по статусу заявки">
+          <div className="orders-toolbar-filters-row orders-toolbar-filters-row--full">
+            <button
+              type="button"
+              className={
+                statusFilter === REQUEST_FILTER_NEW ? "app-btn app-btn-primary" : "app-btn app-btn-soft"
+              }
+              onClick={() => {
+                setPage(0);
+                setStatusFilter(REQUEST_FILTER_NEW);
+              }}
+            >
+              {REQUEST_FILTER_NEW}
+            </button>
+          </div>
+          <div className="orders-toolbar-filters-row orders-toolbar-filters-row--three">
+            {REQUEST_FILTER_REST.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={statusFilter === s ? "app-btn app-btn-primary" : "app-btn app-btn-soft"}
+                onClick={() => {
+                  setPage(0);
+                  setStatusFilter(s);
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="orders-toolbar-actions">
+          <button type="submit" className="app-btn app-btn-primary">
+            Применить
+          </button>
+          <button
+            type="button"
+            className="app-btn app-btn-ghost"
+            onClick={() => {
+              setSearch("");
+              setSearchInput("");
+              setStatusFilter("");
+              setPage(0);
+            }}
+          >
+            Сбросить
+          </button>
+        </div>
       </form>
 
       {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
@@ -446,6 +468,7 @@ export default function OrdersPage() {
                   handleQuickStatus(order, requestStatus, orderStatus)
                 }
                 onAccept={() => handleQuickStatus(order, "Принята", order.order_status)}
+                onComplete={() => handleQuickStatus(order, "Исполнена", order.order_status)}
                 onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
@@ -669,6 +692,7 @@ function OrderMobileCard({
   onToggleExpand,
   onStatusChange,
   onAccept,
+  onComplete,
   onReject,
   onEdit,
   onDelete,
@@ -682,6 +706,7 @@ function OrderMobileCard({
   onToggleExpand: () => void;
   onStatusChange: (requestStatus: string, orderStatus: string) => void;
   onAccept: () => void;
+  onComplete: () => void;
   onReject: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -702,6 +727,9 @@ function OrderMobileCard({
     .slice(0, 1)
     .toUpperCase();
   const displayUserName = userName || "Пользователь";
+  const requestNorm = order.request_status.trim().toLowerCase();
+  const primaryIsComplete = requestNorm === "принята";
+  const primaryTerminal = requestNorm === "исполнена" || requestNorm === "отклонена";
   const openedOffset = swipeOpen === "edit" ? 82 : swipeOpen === "delete" ? -82 : 0;
   const swipeX = dragStart ? dragOffset : openedOffset;
 
@@ -786,18 +814,28 @@ function OrderMobileCard({
           </div>
           <div className="order-card-hero-title">{order.model || "Заказ"}</div>
           <div className="order-card-hero-actions">
-            <button
-              type="button"
-              className="order-card-hero-btn order-card-hero-btn--accept"
-              disabled={saving}
-              onClick={onAccept}
-            >
-              + Принять
-            </button>
+            {primaryTerminal ? (
+              <button
+                type="button"
+                className={`order-card-hero-btn order-card-hero-btn--accept order-card-hero-btn--terminal${requestNorm === "отклонена" ? " order-card-hero-btn--state-muted" : ""}`}
+                disabled
+              >
+                {requestNorm === "исполнена" ? "Исполнено" : "Отклонено"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="order-card-hero-btn order-card-hero-btn--accept"
+                disabled={saving}
+                onClick={primaryIsComplete ? onComplete : onAccept}
+              >
+                {primaryIsComplete ? "+ Исполнить" : "+ Принять"}
+              </button>
+            )}
             <button
               type="button"
               className="order-card-hero-btn order-card-hero-btn--reject"
-              disabled={saving}
+              disabled={saving || requestNorm === "отклонена"}
               onClick={onReject}
             >
               ✕ Отклонить
