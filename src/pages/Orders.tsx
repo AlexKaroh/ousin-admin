@@ -1060,9 +1060,26 @@ function OrderMobileCard({
         <div className="order-card-hero-main">
           <div className="order-card-hero-top">
             <span className="order-card-hero-date">{formatDate(order.order_date)}</span>
-            <span className="order-card-hero-badge">{requestStatusBadgeText(order.request_status)}</span>
+            <span className={`order-card-hero-pill order-card-hero-pill--${statusTone(order.request_status)}`}>
+              {requestStatusBadgeText(order.request_status)}
+            </span>
           </div>
-          <div className="order-card-hero-user">{displayUserName}</div>
+          <div className="order-card-hero-user-row">
+            {order.user?.photo_url ? (
+              <img
+                className="order-card-hero-user-avatar"
+                src={order.user.photo_url}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <div className="order-card-hero-user-avatar order-card-hero-user-avatar--fallback" aria-hidden>
+                {userInitial}
+              </div>
+            )}
+            <span className="order-card-hero-user-name">{displayUserName}</span>
+          </div>
           <div className="order-card-hero-price-row">
             <span className="order-card-hero-price">{order.price.toLocaleString("ru-RU")} ¥</span>
             {order.size != null ? (
