@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch, ApiError } from "../api";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
@@ -52,14 +52,6 @@ type ListResponse = {
   take: number;
   skip: number;
   items: AdminOrder[];
-};
-
-type FetchProductImageResponse = {
-  imageUrl: string;
-  source?: string;
-  title?: string;
-  candidates: string[];
-  order_photo: string;
 };
 
 const REQUEST_STATUSES = ["Новые", "Принята", "Завершена", "Отклонена"] as const;
@@ -159,6 +151,269 @@ const PAGE_SIZE = 20;
 function hasProductImage(orderPhoto: string | null | undefined) {
   const value = String(orderPhoto || "").trim();
   return Boolean(value) && !value.includes("order-no-product-photo");
+}
+
+const SUGGEST_PHOTO_CAP = 5;
+const MAX_ORDER_PHOTO_DATA_URL_CHARS = 1_050_000;
+
+type SuggestImagesResponse = { suggestions: string[] };
+
+async function compressImageFileToDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Выберите файл изображения");
+  }
+  const bmp = await createImageBitmap(file);
+  let w = bmp.width;
+  let h = bmp.height;
+  const maxDim = 800;
+  if (w > maxDim || h > maxDim) {
+    const r = Math.min(maxDim / w, maxDim / h);
+    w = Math.round(w * r);
+    h = Math.round(h * r);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Не удалось обработать изображение");
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  let quality = 0.82;
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+  while (dataUrl.length > MAX_ORDER_PHOTO_DATA_URL_CHARS && quality > 0.42) {
+    quality -= 0.08;
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+  if (dataUrl.length > MAX_ORDER_PHOTO_DATA_URL_CHARS) {
+    throw new Error("Файл слишком большой — выберите изображение меньшего размера");
+  }
+  return dataUrl;
+}
+
+function OrderPhotoModalContent({
+  order,
+  onClose,
+  onSaved,
+}: {
+  order: AdminOrder;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [batchSize, setBatchSize] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [suggestBusy, setSuggestBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [manualUrl, setManualUrl] = useState("");
+  const [localErr, setLocalErr] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSuggestions([]);
+    setBatchSize(0);
+    setSelected(null);
+    setManualUrl("");
+    setLocalErr("");
+  }, [order.id]);
+
+  const busy = suggestBusy || saveBusy || uploadBusy;
+
+  async function persistPhoto(photo: string) {
+    setSaveBusy(true);
+    setLocalErr("");
+    try {
+      await apiFetch(`/admin/orders/${order.id}`, {
+        method: "PATCH",
+        body: { order_photo: photo.trim() },
+      });
+      await onSaved();
+      onClose();
+    } catch (err) {
+      setLocalErr(err instanceof ApiError ? err.message : "Не удалось сохранить фото");
+    } finally {
+      setSaveBusy(false);
+    }
+  }
+
+  async function runSuggest() {
+    setSuggestBusy(true);
+    setLocalErr("");
+    try {
+      const res = await apiFetch<SuggestImagesResponse>(
+        `/admin/orders/${order.id}/suggest-images`,
+        { method: "POST" },
+      );
+      const list = (res.suggestions || []).slice(0, SUGGEST_PHOTO_CAP);
+      setBatchSize(list.length);
+      setSuggestions(list);
+      setSelected(list[0] ?? null);
+    } catch (err) {
+      setLocalErr(err instanceof ApiError ? err.message : "Не удалось подобрать фото");
+    } finally {
+      setSuggestBusy(false);
+    }
+  }
+
+  function removeSuggestion(url: string) {
+    setSuggestions((prev) => prev.filter((u) => u !== url));
+    if (selected === url) setSelected(null);
+  }
+
+  async function applyManualUrl() {
+    const t = manualUrl.trim();
+    if (!t) {
+      setLocalErr("Вставьте ссылку на изображение");
+      return;
+    }
+    if (!/^https?:\/\//i.test(t) && !t.startsWith("data:image/")) {
+      setLocalErr("Нужен URL, начинающийся с http(s)://");
+      return;
+    }
+    await persistPhoto(t);
+  }
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadBusy(true);
+    setLocalErr("");
+    try {
+      const dataUrl = await compressImageFileToDataUrl(file);
+      await persistPhoto(dataUrl);
+    } catch (err) {
+      setLocalErr(err instanceof Error ? err.message : "Не удалось загрузить файл");
+    } finally {
+      setUploadBusy(false);
+    }
+  }
+
+  const canSuggest = Boolean(order.model?.trim() || order.order_url?.trim());
+
+  return (
+    <div className="order-photo-modal">
+      {localErr ? <div className="order-photo-modal__error">{localErr}</div> : null}
+      <p className="order-photo-modal__hint muted">
+        Подбор по названию и странице товара (до {SUGGEST_PHOTO_CAP} превью). Выберите одно и сохраните или
+        загрузите своё.
+      </p>
+      <div className="order-photo-modal__model muted" style={{ fontSize: 13 }}>
+        <strong className="order-photo-modal__model-name">{order.model?.trim() || "—"}</strong>
+        {order.order_url?.trim() ? (
+          <>
+            {" "}
+            ·{" "}
+            <a href={order.order_url} target="_blank" rel="noreferrer" className="order-photo-modal__link">
+              открыть ссылку
+            </a>
+          </>
+        ) : null}
+      </div>
+
+      <div className="order-photo-modal__actions">
+        <button
+          type="button"
+          className="app-btn app-btn-primary"
+          onClick={() => void runSuggest()}
+          disabled={busy || !canSuggest}
+        >
+          {suggestBusy ? "Подбираем…" : "Подобрать фото"}
+        </button>
+      </div>
+
+      {batchSize > 0 ? (
+        <div className="order-photo-strip-block">
+          <div className="order-photo-strip-head">
+            Фото{" "}
+            <span className="order-photo-strip-head__count">
+              {suggestions.length}/{batchSize}
+            </span>
+          </div>
+          {suggestions.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+              Все варианты убраны — нажмите «Подобрать фото» ещё раз.
+            </p>
+          ) : (
+            <div className="order-photo-strip">
+              {suggestions.map((url) => (
+                <div
+                  key={url}
+                  className={`order-photo-thumb-wrap${selected === url ? " order-photo-thumb-wrap--selected" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="order-photo-thumb"
+                    onClick={() => setSelected(url)}
+                    aria-label="Выбрать это фото"
+                  >
+                    <img src={url} alt="" loading="lazy" decoding="async" />
+                  </button>
+                  <button
+                    type="button"
+                    className="order-photo-thumb-remove"
+                    onClick={() => removeSuggestion(url)}
+                    aria-label="Убрать из списка"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="order-photo-modal__save-row">
+            <button
+              type="button"
+              className="app-btn app-btn-soft"
+              disabled={!selected || saveBusy || uploadBusy}
+              onClick={() => selected && void persistPhoto(selected)}
+            >
+              {saveBusy ? "Сохраняем…" : "Сохранить выбранное"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="order-photo-modal__manual">
+        <div className="order-photo-modal__manual-title">Вручную</div>
+        <div className="order-photo-modal__manual-row">
+          <input
+            type="file"
+            accept="image/*"
+            className="order-photo-file-input"
+            ref={fileRef}
+            onChange={(e) => void onPickFile(e)}
+            aria-hidden
+          />
+          <button
+            type="button"
+            className="app-btn app-btn-soft"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+          >
+            {uploadBusy ? "Обработка…" : "С устройства"}
+          </button>
+        </div>
+        <div className="order-photo-modal__url-row">
+          <input
+            type="url"
+            className="app-input"
+            placeholder="https://… (прямая ссылка на изображение)"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+          />
+          <button
+            type="button"
+            className="app-btn app-btn-soft"
+            disabled={busy || !manualUrl.trim()}
+            onClick={() => void applyManualUrl()}
+          >
+            По URL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 async function writeClipboard(text: string): Promise<boolean> {
@@ -277,9 +532,9 @@ export default function OrdersPage() {
   const [page, setPage] = useState(0);
 
   const [editing, setEditing] = useState<AdminOrder | null>(null);
+  const [photoPickerOrder, setPhotoPickerOrder] = useState<AdminOrder | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [imageGeneratingId, setImageGeneratingId] = useState<string | null>(null);
   const [expandedMobileOrderId, setExpandedMobileOrderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -356,30 +611,6 @@ export default function OrdersPage() {
       if (err instanceof Error) setError(err.message);
     } finally {
       setDeletingId(null);
-    }
-  }
-
-  async function handleGenerateImage(order: AdminOrder) {
-    if (!order.order_url?.trim()) {
-      setError("У заявки нет ссылки на товар");
-      return;
-    }
-    setImageGeneratingId(order.id);
-    setError("");
-    try {
-      await apiFetch<FetchProductImageResponse>(
-        `/admin/orders/${order.id}/fetch-product-image`,
-        { method: "POST" },
-      );
-      await load();
-    } catch (err) {
-      if (err instanceof ApiError && typeof err.message === "string") {
-        setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : "Не удалось подставить фото по ссылке");
-      }
-    } finally {
-      setImageGeneratingId(null);
     }
   }
 
@@ -477,7 +708,6 @@ export default function OrdersPage() {
                 order={order}
                 saving={savingId === order.id}
                 deleting={deletingId === order.id}
-                imageGenerating={imageGeneratingId === order.id}
                 expanded={expandedMobileOrderId === order.id}
                 onToggleExpand={() =>
                   setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
@@ -487,7 +717,7 @@ export default function OrdersPage() {
                 onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
-                onGenerateImage={() => handleGenerateImage(order)}
+                onOpenPhotoPicker={() => setPhotoPickerOrder(order)}
               />
             ))}
         </div>
@@ -552,15 +782,10 @@ export default function OrdersPage() {
                           type="button"
                           className="app-btn app-btn-soft"
                           style={{ alignSelf: "flex-start", height: 30, padding: "0 10px", fontSize: 12 }}
-                          onClick={() => handleGenerateImage(order)}
-                          disabled={imageGeneratingId === order.id}
-                          title="Скачать страницу товара и выбрать главное фото (og/json-ld)"
+                          onClick={() => setPhotoPickerOrder(order)}
+                          title="Подбор до 5 фото по названию, загрузка с устройства или по URL"
                         >
-                          {imageGeneratingId === order.id
-                            ? "Ищем фото…"
-                            : hasProductImage(order.order_photo)
-                              ? "Обновить фото по ссылке"
-                              : "Подставить фото по ссылке"}
+                          Фото товара…
                         </button>
                       </div>
                     </td>
@@ -686,6 +911,23 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      <Modal
+        open={photoPickerOrder != null}
+        title="Фото товара"
+        variant="dark"
+        cardClassName="modal-card--photo-picker"
+        onClose={() => setPhotoPickerOrder(null)}
+      >
+        {photoPickerOrder ? (
+          <OrderPhotoModalContent
+            key={photoPickerOrder.id}
+            order={photoPickerOrder}
+            onClose={() => setPhotoPickerOrder(null)}
+            onSaved={load}
+          />
+        ) : null}
+      </Modal>
+
       <EditOrderModal
         order={editing}
         onClose={() => setEditing(null)}
@@ -702,7 +944,6 @@ function OrderMobileCard({
   order,
   saving,
   deleting,
-  imageGenerating,
   expanded,
   onToggleExpand,
   onAccept,
@@ -710,12 +951,11 @@ function OrderMobileCard({
   onReject,
   onEdit,
   onDelete,
-  onGenerateImage,
+  onOpenPhotoPicker,
 }: {
   order: AdminOrder;
   saving: boolean;
   deleting: boolean;
-  imageGenerating: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   onAccept: () => void;
@@ -723,7 +963,7 @@ function OrderMobileCard({
   onReject: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onGenerateImage: () => void;
+  onOpenPhotoPicker: () => void;
 }) {
   const tone = statusTone(order.request_status);
   const [swipeOpen, setSwipeOpen] = useState<"edit" | "delete" | null>(null);
@@ -894,16 +1134,9 @@ function OrderMobileCard({
           <button
             type="button"
             className="order-card-link order-card-image-action order-card-image-action--expand-top"
-            onClick={onGenerateImage}
-            disabled={imageGenerating}
+            onClick={onOpenPhotoPicker}
           >
-            <span>
-              {imageGenerating
-                ? "Ищем фото…"
-                : heroHasPhoto
-                  ? "Обновить фото по ссылке"
-                  : "Подставить фото по ссылке"}
-            </span>
+            <span>Фото товара…</span>
           </button>
 
           <div className="order-mobile-copy-stack">

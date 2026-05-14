@@ -10,6 +10,8 @@ type ModalProps = {
   footer?: ReactNode;
   /** Тёмная тема (заказы в админке) */
   variant?: "default" | "dark";
+  /** Доп. класс на карточку (например ширина) */
+  cardClassName?: string;
 };
 
 export default function Modal({
@@ -19,6 +21,7 @@ export default function Modal({
   children,
   footer,
   variant = "default",
+  cardClassName,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -43,7 +46,7 @@ export default function Modal({
       aria-modal="true"
     >
       <div
-        className={`modal-card${variant === "dark" ? " modal-card--dark" : ""}`}
+        className={`modal-card${variant === "dark" ? " modal-card--dark" : ""}${cardClassName ? ` ${cardClassName}` : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div
