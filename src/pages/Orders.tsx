@@ -751,6 +751,7 @@ function OrderMobileCard({
     requestNorm === "завершена" || requestNorm === "исполнена" || requestNorm === "отклонена";
   const showReject = requestNorm === "новые";
   const heroActionTwoCol = !primaryTerminal && showReject;
+  const heroHasPhoto = hasProductImage(order.order_photo);
   const openedOffset = swipeOpen === "edit" ? 82 : swipeOpen === "delete" ? -82 : 0;
   const swipeX = dragStart ? dragOffset : openedOffset;
 
@@ -820,7 +821,7 @@ function OrderMobileCard({
         onPointerCancel={handlePointerUp}
         style={{ transform: `translateX(${swipeX}px)` }}
       >
-      <div className="order-card-collapsed">
+      <div className={`order-card-collapsed${heroHasPhoto ? " order-card-collapsed--with-thumb" : ""}`}>
         <div className="order-card-hero-main">
           <div className="order-card-hero-top">
             <span className="order-card-hero-date">{formatDate(order.order_date)}</span>
@@ -886,13 +887,11 @@ function OrderMobileCard({
             </button>
           </div>
         </div>
-        <div className="order-card-hero-thumb">
-          {hasProductImage(order.order_photo) ? (
-            <img src={order.order_photo} alt="" />
-          ) : (
-            <span>Фото</span>
-          )}
-        </div>
+        {heroHasPhoto ? (
+          <div className="order-card-hero-thumb">
+            <img src={order.order_photo ?? ""} alt="" loading="lazy" decoding="async" />
+          </div>
+        ) : null}
       </div>
 
       <div className="order-card-expand">
@@ -906,7 +905,7 @@ function OrderMobileCard({
             <span>
               {imageGenerating
                 ? "Ищем фото..."
-                : hasProductImage(order.order_photo)
+                : heroHasPhoto
                   ? "Обновить изображение"
                   : "Сгенерировать изображение"}
             </span>
@@ -1009,7 +1008,7 @@ function OrderMobileCard({
             </div>
           ) : null}
 
-          {hasProductImage(order.order_photo) ? (
+          {heroHasPhoto ? (
             <OrderMobileFieldRow
               label="Фото (URL)"
               value={
