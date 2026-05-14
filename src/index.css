@@ -200,7 +200,7 @@ textarea {
 .admin-brand-mark {
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
   color: #fff;
   display: grid;
@@ -236,7 +236,7 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 11px 14px;
-  border-radius: 14px;
+  border-radius: 6px;
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 600;
@@ -278,7 +278,7 @@ textarea {
   align-items: center;
   gap: 10px;
   padding: 10px 8px;
-  border-radius: 14px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
 }
@@ -447,11 +447,34 @@ textarea {
   align-items: stretch;
 }
 
-.orders-toolbar-search {
-  flex: 1 1 100%;
+/* Поиск и «Применить» в одну строку (как на мобильном макете) */
+.orders-toolbar-search-apply {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
   width: 100%;
   min-width: 0;
-  max-width: 100%;
+  flex: 1 1 100%;
+}
+
+.orders-toolbar-search {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+}
+
+.orders-toolbar-apply {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 16px;
+  padding-right: 16px;
+  white-space: nowrap;
+  min-height: 42px;
 }
 
 .orders-toolbar-filters {
@@ -484,24 +507,10 @@ textarea {
   font-size: 13px;
 }
 
-.orders-toolbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.orders-toolbar-actions .app-btn {
-  flex: 1 1 160px;
-  min-width: 0;
-}
-
 .app-input {
   height: 42px;
   padding: 0 14px;
-  border-radius: 14px;
+  border-radius: 6px;
   border: 1px solid var(--border-strong);
   background: rgba(15, 15, 18, 0.85);
   font-size: 14px;
@@ -538,7 +547,7 @@ select.app-input {
 .app-btn {
   height: 42px;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 700;
   display: inline-flex;
@@ -827,7 +836,7 @@ select.app-input {
   color: #fecaca;
   border: 1px solid rgba(248, 113, 113, 0.28);
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -837,7 +846,7 @@ select.app-input {
   color: #bbf7d0;
   border: 1px solid rgba(74, 222, 128, 0.28);
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -1107,11 +1116,28 @@ select.app-input {
   line-height: 1.35;
 }
 
-.order-card-hero-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.order-card-hero-actions-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   margin-top: 12px;
+  min-width: 0;
+}
+
+.order-card-hero-actions {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.order-card-hero-actions--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.order-card-hero-actions--one {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .order-card-hero-btn {
@@ -1163,19 +1189,17 @@ select.app-input {
   filter: brightness(1.08);
 }
 
-.order-card-hero-expand-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-}
-
 .order-card-chevron--hero {
-  width: 30px;
-  height: 30px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   border: 1px solid var(--border-strong);
   background: rgba(0, 0, 0, 0.35);
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .order-card-chevron--hero.is-open {
@@ -1328,10 +1352,72 @@ select.app-input {
   gap: 6px;
 }
 
+/* Информационные статусы в карточке (только просмотр) — рамка + цветной индикатор */
+.order-status-info {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: rgba(10, 10, 12, 0.92);
+  overflow: hidden;
+}
+
+.order-status-info__bar {
+  width: 4px;
+  flex-shrink: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+.order-status-info__main {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-status-info__value {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.order-status-info--accent-blue .order-status-info__bar {
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.order-status-info--accent-emerald .order-status-info__bar {
+  background: linear-gradient(180deg, #34d399, #059669);
+}
+
+.order-status-info--accent-amber .order-status-info__bar {
+  background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+
+.order-status-info--accent-rose .order-status-info__bar {
+  background: linear-gradient(180deg, #fb7185, #e11d48);
+}
+
+.order-status-info--accent-sky .order-status-info__bar {
+  background: linear-gradient(180deg, #38bdf8, #0284c7);
+}
+
+.order-status-info--accent-teal .order-status-info__bar {
+  background: linear-gradient(180deg, #2dd4bf, #0f766e);
+}
+
+.order-status-info--accent-slate .order-status-info__bar {
+  background: linear-gradient(180deg, #94a3b8, #475569);
+}
+
 .order-info-tile {
   background: #1a1a1d;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 8px 9px;
   display: flex;
   flex-direction: column;
@@ -1378,14 +1464,6 @@ select.app-input {
   border-color: rgba(34, 211, 238, 0.28);
 }
 
-.order-card-status select.app-input {
-  height: 34px;
-  font-size: 12px;
-  padding-left: 9px;
-  padding-right: 30px;
-  background-color: rgba(15, 15, 18, 0.95);
-}
-
 .order-info-size {
   justify-content: center;
 }
@@ -1416,7 +1494,7 @@ select.app-input {
   padding: 8px 10px;
   background: #1a1a1d;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: 6px;
   box-shadow: none;
 }
 
@@ -1635,7 +1713,7 @@ select.app-input {
   z-index: 1;
   background: #1a1a1d;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 9px 11px;
   font-size: 12px;
   line-height: 1.4;
@@ -1676,7 +1754,7 @@ select.app-input {
   align-items: center;
   gap: 8px;
   background: #1a1a1d;
-  border-radius: 14px;
+  border-radius: 6px;
   border: 1px solid var(--border-strong);
   padding: 7px 9px;
 }
@@ -1811,7 +1889,7 @@ select.app-input {
 }
 
 .user-meta-chip {
-  border-radius: 14px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border);
   padding: 8px 10px;
@@ -1838,7 +1916,7 @@ select.app-input {
 }
 
 .user-stat-tile {
-  border-radius: 14px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border);
   padding: 8px 10px;
@@ -1964,7 +2042,7 @@ select.app-input {
 .review-text-block {
   position: relative;
   z-index: 1;
-  border-radius: 14px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.28);
   border: 1px solid var(--border);
   padding: 9px 11px;
@@ -2487,6 +2565,25 @@ select.app-input {
 .eo-segment-btn--paid.is-active {
   background: rgba(6, 95, 70, 0.42);
   color: #86efac;
+}
+
+/* Статусы заявки / заказа в модалке — как «Статус оплаты» */
+.eo-segment--status {
+  flex-wrap: wrap;
+}
+
+.eo-segment--status .eo-segment-btn {
+  flex: 1 1 22%;
+  min-width: 0;
+  font-size: 10px;
+  padding: 9px 3px;
+  line-height: 1.2;
+}
+
+.eo-segment--status .eo-segment-btn.is-active {
+  background: rgba(37, 99, 235, 0.45);
+  color: #f8fafc;
+  font-weight: 800;
 }
 
 .eo-two {
