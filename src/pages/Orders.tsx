@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiFetch } from "../api";
+import { apiFetch, ApiError } from "../api";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import {
@@ -54,10 +54,12 @@ type ListResponse = {
   items: AdminOrder[];
 };
 
-type ProductImageResponse = {
+type FetchProductImageResponse = {
   imageUrl: string;
   source?: string;
   title?: string;
+  candidates: string[];
+  order_photo: string;
 };
 
 const REQUEST_STATUSES = ["Новые", "Принята", "Завершена", "Отклонена"] as const;
@@ -358,31 +360,24 @@ export default function OrdersPage() {
   }
 
   async function handleGenerateImage(order: AdminOrder) {
-    if (!order.order_url) {
+    if (!order.order_url?.trim()) {
       setError("У заявки нет ссылки на товар");
       return;
     }
     setImageGeneratingId(order.id);
     setError("");
     try {
-      const payload = await apiFetch<ProductImageResponse>("/api/find-product-image", {
-        method: "POST",
-        body: {
-          url: order.order_url,
-          model: order.model,
-        },
-      });
-      if (!payload.imageUrl) {
-        throw new Error("Не удалось найти изображение товара");
-      }
-
-      await apiFetch(`/admin/orders/${order.id}`, {
-        method: "PATCH",
-        body: { order_photo: payload.imageUrl },
-      });
+      await apiFetch<FetchProductImageResponse>(
+        `/admin/orders/${order.id}/fetch-product-image`,
+        { method: "POST" },
+      );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось сгенерировать изображение");
+      if (err instanceof ApiError && typeof err.message === "string") {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Не удалось подставить фото по ссылке");
+      }
     } finally {
       setImageGeneratingId(null);
     }
@@ -559,13 +554,13 @@ export default function OrdersPage() {
                           style={{ alignSelf: "flex-start", height: 30, padding: "0 10px", fontSize: 12 }}
                           onClick={() => handleGenerateImage(order)}
                           disabled={imageGeneratingId === order.id}
-                          title="Найти и сохранить изображение товара"
+                          title="Скачать страницу товара и выбрать главное фото (og/json-ld)"
                         >
                           {imageGeneratingId === order.id
-                            ? "Ищем фото..."
+                            ? "Ищем фото…"
                             : hasProductImage(order.order_photo)
-                              ? "Обновить изображение"
-                              : "Сгенерировать изображение"}
+                              ? "Обновить фото по ссылке"
+                              : "Подставить фото по ссылке"}
                         </button>
                       </div>
                     </td>
@@ -904,10 +899,10 @@ function OrderMobileCard({
           >
             <span>
               {imageGenerating
-                ? "Ищем фото..."
+                ? "Ищем фото…"
                 : heroHasPhoto
-                  ? "Обновить изображение"
-                  : "Сгенерировать изображение"}
+                  ? "Обновить фото по ссылке"
+                  : "Подставить фото по ссылке"}
             </span>
           </button>
 
