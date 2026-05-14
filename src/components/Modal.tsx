@@ -12,6 +12,8 @@ type ModalProps = {
   variant?: "default" | "dark";
   /** Доп. класс на карточку (например ширина) */
   cardClassName?: string;
+  /** Доп. класс на backdrop (например выше другого модального слоя) */
+  backdropClassName?: string;
 };
 
 export default function Modal({
@@ -22,6 +24,7 @@ export default function Modal({
   footer,
   variant = "default",
   cardClassName,
+  backdropClassName,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -40,7 +43,7 @@ export default function Modal({
 
   return (
     <div
-      className={`modal-backdrop${variant === "dark" ? " modal-backdrop--dark" : ""}`}
+      className={`modal-backdrop${variant === "dark" ? " modal-backdrop--dark" : ""}${backdropClassName ? ` ${backdropClassName}` : ""}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"

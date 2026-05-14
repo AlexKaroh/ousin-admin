@@ -921,6 +921,7 @@ export default function OrdersPage() {
         title="Фото товара"
         variant="dark"
         cardClassName="modal-card--photo-picker"
+        backdropClassName="modal-backdrop--stack-top"
         onClose={() => setPhotoPickerOrder(null)}
       >
         {photoPickerOrder ? (

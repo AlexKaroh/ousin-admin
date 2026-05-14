@@ -871,6 +871,11 @@ select.app-input {
   animation: fadeIn 160ms ease;
 }
 
+/* Поверх модалки редактирования (мобилка: фото из формы) */
+.modal-backdrop--stack-top {
+  z-index: 220;
+}
+
 .modal-card {
   width: 100%;
   max-width: 520px;
