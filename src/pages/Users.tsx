@@ -5,9 +5,9 @@ import PageHeader from "../components/PageHeader";
 import {
   OrdersIcon,
   PencilIcon,
-  ReviewsIcon,
   SearchIcon,
   TrashIcon,
+  UsersIcon,
 } from "../components/Icons";
 
 type AdminUser = {
@@ -390,10 +390,13 @@ function UserMobileCard({
     <div className={`user-card${expanded ? " is-open" : ""}`}>
       <div className="user-card-collapsed">
         <div className="user-card-row">
-          <div className="user-card-avatar">
-            {user.photo_url ? <img src={user.photo_url} alt="" /> : initial}
+          <div className="user-card-avatar-wrap">
+            <div className="user-card-avatar">
+              {user.photo_url ? <img src={user.photo_url} alt="" /> : initial}
+            </div>
           </div>
           <div className="user-card-head">
+            <div className="user-card-eyebrow">Профиль</div>
             <div className="user-card-name">{fullName}</div>
             <div className="user-card-sub">{usernameText}</div>
           </div>
@@ -415,7 +418,7 @@ function UserMobileCard({
                 />
               </svg>
             </button>
-            <div className="row-actions">
+            <div className="row-actions user-card-row-actions">
               <button
                 type="button"
                 className="icon-btn primary"
@@ -437,26 +440,29 @@ function UserMobileCard({
           </div>
         </div>
 
-        <div className="user-card-quick">
-          <span className="user-quick-pill">
-            <OrdersIcon size={14} />
-            <span className="tabular-nums">{user.orders_count}</span>
-            <span className="user-quick-pill-label">заказов</span>
-          </span>
-          <span className="user-quick-pill">
-            <ReviewsIcon size={14} />
-            <span className="tabular-nums">{user.reviews_count}</span>
-            <span className="user-quick-pill-label">отзывов</span>
-          </span>
-          <span className="user-quick-pill user-quick-pill--muted">
-            <span className="user-quick-pill-label">с</span>
-            <span className="tabular-nums">{formatDate(user.created_at)}</span>
-          </span>
+        <div className="user-card-quick-panel">
+          <div className="user-card-quick">
+            <span className="user-quick-pill user-quick-pill--orders">
+              <OrdersIcon size={14} />
+              <span className="tabular-nums">{user.orders_count}</span>
+              <span className="user-quick-pill-label">заказов</span>
+            </span>
+            <span className="user-quick-pill user-quick-pill--invites">
+              <UsersIcon size={14} />
+              <span className="tabular-nums">{user.referrals_count}</span>
+              <span className="user-quick-pill-label">приглашено</span>
+            </span>
+            <span className="user-quick-pill user-quick-pill--since">
+              <span className="user-quick-pill-label">с</span>
+              <span className="tabular-nums">{formatDate(user.created_at)}</span>
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="order-card-expand">
-        <div className="order-card-expand-inner">
+        <div className="order-card-expand-inner user-card-expand-inner">
+          <div className="user-card-expand-title">Учётная запись</div>
           <div className="order-mobile-copy-stack order-mobile-copy-stack--tight">
             <UserMobileField label="ID" value={<span className="order-mobile-field-mono">{user.id}</span>} />
             <UserMobileField label="Telegram ID" value={<span className="order-mobile-field-mono">{user.telegram_id}</span>} />

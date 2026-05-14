@@ -1,0 +1,2 @@
+# SPA fallback: отдаём index.html для любых путей, чтобы React Router работал после F5
+/*    /index.html   200
