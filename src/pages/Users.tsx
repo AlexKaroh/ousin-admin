@@ -442,17 +442,23 @@ function UserMobileCard({
 
         <div className="user-card-quick-panel">
           <div className="user-card-quick">
-            <span className="user-quick-pill user-quick-pill--orders">
+            <span
+              className="user-quick-pill user-quick-pill--orders"
+              title={`Заказов: ${user.orders_count}`}>
               <OrdersIcon size={14} />
               <span className="tabular-nums">{user.orders_count}</span>
               <span className="user-quick-pill-label">заказов</span>
             </span>
-            <span className="user-quick-pill user-quick-pill--invites">
+            <span
+              className="user-quick-pill user-quick-pill--invites"
+              title={`Приглашено: ${user.referrals_count}`}>
               <UsersIcon size={14} />
               <span className="tabular-nums">{user.referrals_count}</span>
               <span className="user-quick-pill-label">приглашено</span>
             </span>
-            <span className="user-quick-pill user-quick-pill--since">
+            <span
+              className="user-quick-pill user-quick-pill--since"
+              title={`С ${formatDate(user.created_at)}`}>
               <span className="user-quick-pill-label">с</span>
               <span className="tabular-nums">{formatDate(user.created_at)}</span>
             </span>

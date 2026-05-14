@@ -2089,6 +2089,8 @@ select.app-input {
 .user-card {
   position: relative;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: user-card;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
@@ -2396,6 +2398,127 @@ select.app-input {
 .user-quick-pill--muted {
   color: var(--text-muted);
   font-weight: 700;
+}
+
+/* Компактная одна строка плашек, когда карточка узкая (и на телефонах) */
+@container user-card (max-width: 520px) {
+  .user-card-quick-panel {
+    padding: 6px 6px;
+    border-radius: 12px;
+  }
+
+  .user-card-quick {
+    flex-wrap: nowrap;
+    gap: 4px;
+    align-items: stretch;
+  }
+
+  .user-quick-pill {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding: 4px 4px;
+    gap: 3px;
+    font-size: 10px;
+    border-radius: 10px;
+  }
+
+  .user-quick-pill svg {
+    width: 12px !important;
+    height: 12px !important;
+    flex-shrink: 0;
+  }
+
+  .user-quick-pill-label {
+    font-size: 7px;
+    letter-spacing: 0.04em;
+  }
+
+  .user-quick-pill--orders .user-quick-pill-label,
+  .user-quick-pill--invites .user-quick-pill-label {
+    display: none;
+  }
+
+  .user-quick-pill--since {
+    flex: 1.2 1 0;
+    min-width: 0;
+    padding-inline: 5px;
+  }
+
+  .user-quick-pill--since .tabular-nums {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-quick-pill--since .user-quick-pill-label {
+    flex-shrink: 0;
+    font-size: 7px;
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (max-width: 520px) {
+    .user-card-quick-panel {
+      padding: 6px 6px;
+      border-radius: 12px;
+    }
+
+    .user-card-quick {
+      flex-wrap: nowrap;
+      gap: 4px;
+      align-items: stretch;
+    }
+
+    .user-quick-pill {
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: center;
+      padding: 4px 4px;
+      gap: 3px;
+      font-size: 10px;
+      border-radius: 10px;
+    }
+
+    .user-quick-pill svg {
+      width: 12px !important;
+      height: 12px !important;
+      flex-shrink: 0;
+    }
+
+    .user-quick-pill-label {
+      font-size: 7px;
+      letter-spacing: 0.04em;
+    }
+
+    .user-quick-pill--orders .user-quick-pill-label,
+    .user-quick-pill--invites .user-quick-pill-label {
+      display: none;
+    }
+
+    .user-quick-pill--since {
+      flex: 1.2 1 0;
+      min-width: 0;
+      padding-inline: 5px;
+    }
+
+    .user-quick-pill--since .tabular-nums {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-quick-pill--since .user-quick-pill-label {
+      flex-shrink: 0;
+      font-size: 7px;
+    }
+  }
 }
 
 .user-card .order-card-expand-inner.user-card-expand-inner {
