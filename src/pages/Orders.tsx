@@ -27,7 +27,7 @@ type AdminOrder = {
   user: AdminOrderUser | null;
   order_photo: string;
   order_url: string;
-  delivery_type: string;
+  delivery_type: string | null;
   model: string;
   size: number | null;
   price: number;
@@ -759,7 +759,7 @@ export default function OrdersPage() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <div style={{ fontWeight: 700 }}>{order.model || "—"}</div>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          {order.delivery_type}
+                          {order.delivery_type?.trim() ? order.delivery_type : "—"}
                         </div>
                         {order.order_url && (
                           <a
@@ -1368,7 +1368,7 @@ function EditOrderModal({
       const body: Record<string, unknown> = {
         model: model.trim(),
         order_url: orderUrl.trim(),
-        delivery_type: deliveryType.trim(),
+        delivery_type: deliveryType.trim() === "" ? null : deliveryType.trim(),
         request_status: requestStatus.trim(),
         order_status: status.trim(),
         payment_status: paymentStatus,
@@ -1548,6 +1548,7 @@ function EditOrderModal({
               value={deliveryType}
               onChange={(e) => setDeliveryType(e.target.value)}
               className="eo-input"
+              placeholder="Пусто — не задано"
             />
           </div>
         </div>
