@@ -6,6 +6,7 @@ import {
   LogoutIcon,
   OrdersIcon,
   ReviewsIcon,
+  SettingsIcon,
   UsersIcon,
 } from "./Icons";
 
@@ -74,6 +75,7 @@ export default function Layout() {
     if (location.pathname.startsWith("/orders")) return "Заказы";
     if (location.pathname.startsWith("/users")) return "Пользователи";
     if (location.pathname.startsWith("/reviews")) return "Отзывы";
+    if (location.pathname.startsWith("/settings/calculator")) return "Комиссия калькулятора";
     return "Дашборд";
   })();
 
@@ -142,6 +144,10 @@ export default function Layout() {
           <NavLink to="/reviews" className="admin-nav-link">
             <ReviewsIcon className="admin-nav-icon" />
             <span>Отзывы</span>
+          </NavLink>
+          <NavLink to="/settings/calculator" className="admin-nav-link">
+            <SettingsIcon className="admin-nav-icon" />
+            <span>Комиссия ¥</span>
           </NavLink>
         </nav>
 

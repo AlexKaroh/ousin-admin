@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import OrdersPage from "./pages/Orders";
 import ReviewsPage from "./pages/Reviews";
 import UsersPage from "./pages/Users";
+import CalculatorCommissionPage from "./pages/CalculatorCommission";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
+        <Route path="/settings/calculator" element={<CalculatorCommissionPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

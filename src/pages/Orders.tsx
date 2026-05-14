@@ -897,6 +897,21 @@ function OrderMobileCard({
 
       <div className="order-card-expand">
         <div className="order-card-expand-inner">
+          <button
+            type="button"
+            className="order-card-link order-card-image-action order-card-image-action--expand-top"
+            onClick={onGenerateImage}
+            disabled={imageGenerating}
+          >
+            <span>
+              {imageGenerating
+                ? "Ищем фото..."
+                : hasProductImage(order.order_photo)
+                  ? "Обновить изображение"
+                  : "Сгенерировать изображение"}
+            </span>
+          </button>
+
           <div className="order-mobile-copy-stack">
             <OrderMobileFieldRow label="ID заявки" value={order.id} copyText={order.id} />
             <OrderMobileFieldRow
@@ -1003,21 +1018,6 @@ function OrderMobileCard({
               copyText={order.order_photo}
             />
           ) : null}
-
-          <button
-            type="button"
-            className="order-card-link order-card-image-action"
-            onClick={onGenerateImage}
-            disabled={imageGenerating}
-          >
-            <span>
-              {imageGenerating
-                ? "Ищем фото..."
-                : hasProductImage(order.order_photo)
-                  ? "Обновить изображение"
-                  : "Сгенерировать изображение"}
-            </span>
-          </button>
 
           {order.comment ? (
             <div className="order-card-comment">
