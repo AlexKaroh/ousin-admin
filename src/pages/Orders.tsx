@@ -550,6 +550,11 @@ export default function OrdersPage() {
         },
       });
       setData(res);
+      setEditing((prev) => {
+        if (!prev?.id || !res?.items) return prev;
+        const found = res.items.find((o) => o.id === prev.id);
+        return found ?? prev;
+      });
     } catch (err) {
       if (err instanceof Error) setError(err.message);
     } finally {
@@ -931,6 +936,9 @@ export default function OrdersPage() {
       <EditOrderModal
         order={editing}
         onClose={() => setEditing(null)}
+        onOpenPhotoPicker={() => {
+          if (editing) setPhotoPickerOrder(editing);
+        }}
         onSaved={async () => {
           setEditing(null);
           await load();
@@ -1308,11 +1316,14 @@ function EditOrderModal({
   order,
   onClose,
   onSaved,
+  onOpenPhotoPicker,
 }: {
   order: AdminOrder | null;
   onClose: () => void;
   onSaved: () => void;
+  onOpenPhotoPicker?: () => void;
 }) {
+  const [orderPhoto, setOrderPhoto] = useState("");
   const [model, setModel] = useState("");
   const [orderUrl, setOrderUrl] = useState("");
   const [deliveryType, setDeliveryType] = useState("");
@@ -1330,6 +1341,7 @@ function EditOrderModal({
 
   useEffect(() => {
     if (!order) return;
+    setOrderPhoto(order.order_photo || "");
     setModel(order.model || "");
     setOrderUrl(order.order_url || "");
     setDeliveryType(order.delivery_type || "");
@@ -1366,6 +1378,7 @@ function EditOrderModal({
     setError("");
     try {
       const body: Record<string, unknown> = {
+        order_photo: orderPhoto.trim(),
         model: model.trim(),
         order_url: orderUrl.trim(),
         delivery_type: deliveryType.trim() === "" ? null : deliveryType.trim(),
@@ -1431,14 +1444,39 @@ function EditOrderModal({
     >
       <form id="edit-order-form" className="eo-form" onSubmit={handleSubmit}>
         <div className="eo-field">
-          <label className="eo-label">Описание</label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="eo-input eo-textarea"
-            placeholder="Размер, цвет, особенности…"
-            rows={3}
-          />
+          <label className="eo-label" htmlFor="eo-order-photo-url">
+            Фото товара
+          </label>
+          <div className="eo-photo-row">
+            <div
+              className={`eo-photo-thumb${hasProductImage(orderPhoto) ? "" : " eo-photo-thumb--empty"}`}
+            >
+              {hasProductImage(orderPhoto) ? (
+                <img src={orderPhoto} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span>Нет фото</span>
+              )}
+            </div>
+            <div className="eo-photo-actions">
+              <input
+                id="eo-order-photo-url"
+                value={orderPhoto}
+                onChange={(e) => setOrderPhoto(e.target.value)}
+                className="eo-input"
+                placeholder="URL изображения (https://…) или data:image/…"
+              />
+              {onOpenPhotoPicker ? (
+                <button
+                  type="button"
+                  className="eo-footer-btn eo-footer-btn--ghost"
+                  style={{ alignSelf: "flex-start", padding: "8px 14px", fontSize: 13 }}
+                  onClick={() => onOpenPhotoPicker()}
+                >
+                  Подобрать или загрузить…
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         <div className="eo-field">
@@ -1455,13 +1493,44 @@ function EditOrderModal({
         </div>
 
         <div className="eo-field">
-          <label className="eo-label">Трек Китай (china_code)</label>
+          <label className="eo-label">Название товара (модель)</label>
           <input
-            value={chinaCode}
-            onChange={(e) => setChinaCode(e.target.value)}
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
             className="eo-input"
-            placeholder="Трек-номер из Китая"
-            maxLength={120}
+            maxLength={200}
+          />
+        </div>
+
+        <div className="eo-two">
+          <div className="eo-field">
+            <label className="eo-label">Размер</label>
+            <input
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              className="eo-input"
+              inputMode="numeric"
+            />
+          </div>
+          <div className="eo-field">
+            <label className="eo-label">Тип доставки</label>
+            <input
+              value={deliveryType}
+              onChange={(e) => setDeliveryType(e.target.value)}
+              className="eo-input"
+              placeholder="Пусто — не задано"
+            />
+          </div>
+        </div>
+
+        <div className="eo-field">
+          <label className="eo-label">Описание</label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="eo-input eo-textarea"
+            placeholder="Размер, цвет, вариант, особенности…"
+            rows={3}
           />
         </div>
 
@@ -1482,6 +1551,17 @@ function EditOrderModal({
         <p className="eo-hint">
           Курс: {CNY_PER_USD_DISPLAY} ¥/$ · формула: цена ¥ / курс (только подсказка)
         </p>
+
+        <div className="eo-field">
+          <label className="eo-label">Трек Китай (china_code)</label>
+          <input
+            value={chinaCode}
+            onChange={(e) => setChinaCode(e.target.value)}
+            className="eo-input"
+            placeholder="Трек-номер из Китая"
+            maxLength={120}
+          />
+        </div>
 
         <div className="eo-field">
           <label className="eo-label">Статус оплаты</label>
@@ -1521,37 +1601,6 @@ function EditOrderModal({
             />
           </div>
         ) : null}
-
-        <div className="eo-field">
-          <label className="eo-label">Название товара (модель)</label>
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="eo-input"
-            maxLength={200}
-          />
-        </div>
-
-        <div className="eo-two">
-          <div className="eo-field">
-            <label className="eo-label">Размер</label>
-            <input
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              className="eo-input"
-              inputMode="numeric"
-            />
-          </div>
-          <div className="eo-field">
-            <label className="eo-label">Тип доставки</label>
-            <input
-              value={deliveryType}
-              onChange={(e) => setDeliveryType(e.target.value)}
-              className="eo-input"
-              placeholder="Пусто — не задано"
-            />
-          </div>
-        </div>
 
         <div className="eo-field">
           <label className="eo-label">Статус заявки</label>

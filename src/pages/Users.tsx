@@ -188,6 +188,7 @@ export default function UsersPage() {
                 <th>Пользователь</th>
                 <th>Telegram</th>
                 <th>Реф. код</th>
+                <th>Приглашено</th>
                 <th>Реф. баллы</th>
                 <th>Заказы</th>
                 <th>Отзывы</th>
@@ -198,14 +199,14 @@ export default function UsersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     Загружаем пользователей…
                   </td>
                 </tr>
               )}
               {!loading && data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="empty-state">
+                  <td colSpan={9} className="empty-state">
                     Пользователи не найдены
                   </td>
                 </tr>
@@ -266,6 +267,9 @@ export default function UsersPage() {
                       </td>
                       <td data-label="Реф. код">
                         <span className="badge">{user.referral_code}</span>
+                      </td>
+                      <td data-label="Приглашено" className="tabular-nums">
+                        {user.referrals_count}
                       </td>
                       <td data-label="Баллы" className="tabular-nums">
                         {user.referral_points}
@@ -403,6 +407,10 @@ function UserMobileCard({
           <span className="meta-label">Реф-код</span>
           <span className="badge">{user.referral_code}</span>
         </div>
+        <div className="user-meta-chip">
+          <span className="meta-label">Приглашено</span>
+          <span className="tabular-nums">{user.referrals_count}</span>
+        </div>
       </div>
 
       <div className="user-card-stats">
@@ -452,6 +460,7 @@ function EditUserModal({
   const [photoUrl, setPhotoUrl] = useState("");
   const [referredBy, setReferredBy] = useState("");
   const [referralPoints, setReferralPoints] = useState("");
+  const [referralsCount, setReferralsCount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -463,6 +472,7 @@ function EditUserModal({
     setPhotoUrl(user.photo_url || "");
     setReferredBy(user.referred_by || "");
     setReferralPoints(String(user.referral_points ?? 0));
+    setReferralsCount(String(user.referrals_count ?? 0));
     setError("");
   }, [user]);
 
@@ -485,6 +495,10 @@ function EditUserModal({
           referral_points: Math.max(
             0,
             Math.round(Number(String(referralPoints).replace(",", ".").trim()) || 0),
+          ),
+          referrals_count: Math.max(
+            0,
+            Math.round(Number(String(referralsCount).replace(",", ".").trim()) || 0),
           ),
         },
       });
@@ -566,14 +580,25 @@ function EditUserModal({
             placeholder="Реф-код пригласившего"
           />
         </div>
-        <div className="field">
-          <label className="field-label">Реф. баллы</label>
-          <input
-            value={referralPoints}
-            onChange={(e) => setReferralPoints(e.target.value)}
-            className="app-input"
-            inputMode="numeric"
-          />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="field">
+            <label className="field-label">Приглашено (чел.)</label>
+            <input
+              value={referralsCount}
+              onChange={(e) => setReferralsCount(e.target.value)}
+              className="app-input"
+              inputMode="numeric"
+            />
+          </div>
+          <div className="field">
+            <label className="field-label">Реф. баллы</label>
+            <input
+              value={referralPoints}
+              onChange={(e) => setReferralPoints(e.target.value)}
+              className="app-input"
+              inputMode="numeric"
+            />
+          </div>
         </div>
         {error && <div className="error-banner">{error}</div>}
         <div className="muted" style={{ fontSize: 12 }}>
