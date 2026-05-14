@@ -84,9 +84,9 @@ function requestStatusBadgeText(status: string): string {
 
 function statusTone(status: string): "blue" | "emerald" | "rose" | "amber" {
   const s = status.trim().toLowerCase();
-  if (s === "новые") return "blue";
+  if (s === "новые") return "amber";
   if (s === "принята") return "emerald";
-  if (s === "завершена" || s === "исполнена") return "amber";
+  if (s === "завершена" || s === "исполнена") return "blue";
   if (s === "отклонена") return "rose";
   return "amber";
 }

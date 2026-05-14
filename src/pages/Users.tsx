@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
@@ -8,7 +8,6 @@ import {
   ReviewsIcon,
   SearchIcon,
   TrashIcon,
-  UsersIcon,
 } from "../components/Icons";
 
 type AdminUser = {
@@ -58,6 +57,7 @@ export default function UsersPage() {
 
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedMobileUserId, setExpandedMobileUserId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,6 +176,10 @@ export default function UsersPage() {
                 key={user.id}
                 user={user}
                 deleting={deletingId === user.id}
+                expanded={expandedMobileUserId === user.id}
+                onToggleExpand={() =>
+                  setExpandedMobileUserId((prev) => (prev === user.id ? null : user.id))
+                }
                 onEdit={() => setEditing(user)}
                 onDelete={() => handleDelete(user)}
               />
@@ -347,14 +351,29 @@ export default function UsersPage() {
   );
 }
 
+function UserMobileField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="order-mobile-field-row">
+      <div className="order-mobile-field-body">
+        <span className="order-info-label">{label}</span>
+        <div className="order-mobile-field-value">{value}</div>
+      </div>
+    </div>
+  );
+}
+
 function UserMobileCard({
   user,
   deleting,
+  expanded,
+  onToggleExpand,
   onEdit,
   onDelete,
 }: {
   user: AdminUser;
   deleting: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -368,78 +387,105 @@ function UserMobileCard({
   const shortId = user.id ? `#${user.id.slice(0, 8)}` : "";
 
   return (
-    <div className="user-card">
-      <div className="user-card-row">
-        <div className="user-card-avatar">
-          {user.photo_url ? <img src={user.photo_url} alt="" /> : initial}
-        </div>
-        <div className="user-card-head">
-          <div className="user-card-name">{fullName}</div>
-          <div className="user-card-sub">{usernameText}</div>
-        </div>
-        <div className="row-actions">
-          <button
-            type="button"
-            className="icon-btn primary"
-            onClick={onEdit}
-            aria-label="Редактировать пользователя"
-          >
-            <PencilIcon />
-          </button>
-          <button
-            type="button"
-            className="icon-btn danger"
-            onClick={onDelete}
-            disabled={deleting}
-            aria-label="Удалить пользователя"
-          >
-            {deleting ? <span className="spinner" /> : <TrashIcon />}
-          </button>
-        </div>
-      </div>
-
-      <div className="user-card-meta">
-        <div className="user-meta-chip">
-          <span className="meta-label">Telegram</span>
-          <span className="font-mono">{user.telegram_id}</span>
-        </div>
-        <div className="user-meta-chip">
-          <span className="meta-label">Реф-код</span>
-          <span className="badge">{user.referral_code}</span>
-        </div>
-        <div className="user-meta-chip">
-          <span className="meta-label">Приглашено</span>
-          <span className="tabular-nums">{user.referrals_count}</span>
-        </div>
-      </div>
-
-      <div className="user-card-stats">
-        <div className="user-stat-tile">
-          <span className="meta-label">Заказы</span>
-          <div className="user-stat-value">
-            <OrdersIcon size={15} />
-            {user.orders_count}
+    <div className={`user-card${expanded ? " is-open" : ""}`}>
+      <div className="user-card-collapsed">
+        <div className="user-card-row">
+          <div className="user-card-avatar">
+            {user.photo_url ? <img src={user.photo_url} alt="" /> : initial}
+          </div>
+          <div className="user-card-head">
+            <div className="user-card-name">{fullName}</div>
+            <div className="user-card-sub">{usernameText}</div>
+          </div>
+          <div className="user-card-actions">
+            <button
+              type="button"
+              className={`order-card-chevron user-card-chevron ${expanded ? "is-open" : ""}`}
+              onClick={onToggleExpand}
+              aria-label={expanded ? "Свернуть детали" : "Развернуть детали"}
+              aria-expanded={expanded}
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                  d="M5 8l5 5 5-5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="icon-btn primary"
+                onClick={onEdit}
+                aria-label="Редактировать пользователя"
+              >
+                <PencilIcon />
+              </button>
+              <button
+                type="button"
+                className="icon-btn danger"
+                onClick={onDelete}
+                disabled={deleting}
+                aria-label="Удалить пользователя"
+              >
+                {deleting ? <span className="spinner" /> : <TrashIcon />}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="user-stat-tile">
-          <span className="meta-label">Отзывы</span>
-          <div className="user-stat-value">
-            <ReviewsIcon size={15} />
-            {user.reviews_count}
-          </div>
-        </div>
-        <div className="user-stat-tile">
-          <span className="meta-label">Регистрация</span>
-          <div className="user-stat-value">{formatDate(user.created_at)}</div>
+
+        <div className="user-card-quick">
+          <span className="user-quick-pill">
+            <OrdersIcon size={14} />
+            <span className="tabular-nums">{user.orders_count}</span>
+            <span className="user-quick-pill-label">заказов</span>
+          </span>
+          <span className="user-quick-pill">
+            <ReviewsIcon size={14} />
+            <span className="tabular-nums">{user.reviews_count}</span>
+            <span className="user-quick-pill-label">отзывов</span>
+          </span>
+          <span className="user-quick-pill user-quick-pill--muted">
+            <span className="user-quick-pill-label">с</span>
+            <span className="tabular-nums">{formatDate(user.created_at)}</span>
+          </span>
         </div>
       </div>
 
-      <div className="user-card-foot">
-        <span className="user-chip">
-          <UsersIcon size={14} />
-          {user.referred_by ? `ref: ${user.referred_by}` : "без реферера"}
-        </span>
-        {shortId && <span className="order-card-id">{shortId}</span>}
+      <div className="order-card-expand">
+        <div className="order-card-expand-inner">
+          <div className="order-mobile-copy-stack order-mobile-copy-stack--tight">
+            <UserMobileField label="ID" value={<span className="order-mobile-field-mono">{user.id}</span>} />
+            <UserMobileField label="Telegram ID" value={<span className="order-mobile-field-mono">{user.telegram_id}</span>} />
+            <UserMobileField label="Реф. код" value={<span className="badge">{user.referral_code}</span>} />
+            <UserMobileField
+              label="Приглашено"
+              value={<span className="tabular-nums">{user.referrals_count}</span>}
+            />
+            <UserMobileField
+              label="Реф. баллы"
+              value={<span className="tabular-nums">{user.referral_points}</span>}
+            />
+            <UserMobileField label="Регистрация" value={formatDate(user.created_at)} />
+            <UserMobileField
+              label="Реферер"
+              value={
+                user.referred_by ? (
+                  <span className="order-mobile-field-mono">{user.referred_by}</span>
+                ) : (
+                  "—"
+                )
+              }
+            />
+          </div>
+
+          <div className="user-card-expand-foot">
+            {shortId ? <span className="order-card-id">{shortId}</span> : null}
+          </div>
+        </div>
       </div>
     </div>
   );

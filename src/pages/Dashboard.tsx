@@ -1,6 +1,8 @@
+import { type ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import PageHeader from "../components/PageHeader";
+import { CheckIcon, OrdersIcon, ReviewsIcon, UsersIcon } from "../components/Icons";
 
 type Stats = {
   users: number;
@@ -19,6 +21,25 @@ const initial: Stats = {
   orders_pending: 0,
   revenue_cny: 0,
 };
+
+function KpiBlob({ children, tone }: { children: ReactNode; tone: string }) {
+  return <div className={`dashboard-kpi-blob dashboard-kpi-blob--${tone}`}>{children}</div>;
+}
+
+function IconPending({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 6v6l4 2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>(initial);
@@ -52,40 +73,68 @@ export default function Dashboard() {
 
       {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
 
-      <div className="stat-grid">
-        <div className="app-card stat-card">
-          <span className="stat-label">Пользователи</span>
-          <span className="stat-value">{loading ? "…" : stats.users}</span>
-          <span className="stat-foot">Всего зарегистрировано</span>
-        </div>
-        <div className="app-card stat-card accent-cyan">
-          <span className="stat-label">Заказы</span>
-          <span className="stat-value">{loading ? "…" : stats.orders}</span>
-          <span className="stat-foot">Всего в системе</span>
-        </div>
-        <div className="app-card stat-card accent-amber">
-          <span className="stat-label">В работе</span>
-          <span className="stat-value">{loading ? "…" : stats.orders_pending}</span>
-          <span className="stat-foot">Со статусом «Заявка»</span>
-        </div>
-        <div className="app-card stat-card accent-emerald">
-          <span className="stat-label">Оплачено</span>
-          <span className="stat-value">{loading ? "…" : stats.orders_paid}</span>
-          <span className="stat-foot">Заказов is_paid = true</span>
-        </div>
-        <div className="app-card stat-card accent-violet">
-          <span className="stat-label">Отзывы</span>
-          <span className="stat-value">{loading ? "…" : stats.reviews}</span>
-          <span className="stat-foot">Опубликовано клиентами</span>
-        </div>
-        <div className="app-card stat-card">
-          <span className="stat-label">Выручка (¥)</span>
-          <span className="stat-value">
-            {loading ? "…" : stats.revenue_cny.toLocaleString("ru-RU")}
-          </span>
-          <span className="stat-foot">Сумма по оплаченным заказам</span>
-        </div>
-      </div>
+      <section className="dashboard-kpi" aria-label="Ключевые показатели">
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--revenue">
+          <KpiBlob tone="gold">
+            <span className="dashboard-kpi-currency-glyph" aria-hidden>
+              ¥
+            </span>
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">Выручка</span>
+          <div className="dashboard-kpi-metric-row">
+            <span className="dashboard-kpi-metric">
+              {loading ? "…" : stats.revenue_cny.toLocaleString("ru-RU")}
+            </span>
+            <span className="dashboard-kpi-unit">¥</span>
+          </div>
+          <span className="dashboard-kpi-note">Сумма по оплаченным заказам</span>
+        </article>
+
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--users">
+          <KpiBlob tone="sky">
+            <UsersIcon size={18} />
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">Пользователи</span>
+          <span className="dashboard-kpi-metric">{loading ? "…" : stats.users}</span>
+          <span className="dashboard-kpi-note">Всего зарегистрировано</span>
+        </article>
+
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--orders">
+          <KpiBlob tone="cyan">
+            <OrdersIcon size={18} />
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">Заказы</span>
+          <span className="dashboard-kpi-metric">{loading ? "…" : stats.orders}</span>
+          <span className="dashboard-kpi-note">Всего в системе</span>
+        </article>
+
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--work">
+          <KpiBlob tone="amber">
+            <IconPending size={18} />
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">В работе</span>
+          <span className="dashboard-kpi-metric">{loading ? "…" : stats.orders_pending}</span>
+          <span className="dashboard-kpi-note">Со статусом «Заявка»</span>
+        </article>
+
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--paid">
+          <KpiBlob tone="emerald">
+            <CheckIcon size={18} />
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">Оплачено</span>
+          <span className="dashboard-kpi-metric">{loading ? "…" : stats.orders_paid}</span>
+          <span className="dashboard-kpi-note">Заказы с is_paid = true</span>
+        </article>
+
+        <article className="dashboard-kpi-tile app-card dashboard-kpi-tile--reviews">
+          <KpiBlob tone="violet">
+            <ReviewsIcon size={18} />
+          </KpiBlob>
+          <span className="dashboard-kpi-eyebrow">Отзывы</span>
+          <span className="dashboard-kpi-metric">{loading ? "…" : stats.reviews}</span>
+          <span className="dashboard-kpi-note">Опубликовано клиентами</span>
+        </article>
+      </section>
 
       <div className="dashboard-callout">
         <div className="dashboard-callout-mark">O</div>

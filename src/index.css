@@ -432,6 +432,169 @@ textarea {
   font-weight: 600;
 }
 
+/* ----- Dashboard KPI (bento) ----- */
+
+.dashboard-kpi {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.dashboard-kpi-tile {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 118px;
+}
+
+.dashboard-kpi-tile::after {
+  content: "";
+  position: absolute;
+  inset: -45% -40% auto auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+  filter: blur(28px);
+  z-index: 0;
+}
+
+.dashboard-kpi-tile--revenue::after {
+  background: radial-gradient(circle at 30% 30%, rgba(250, 204, 21, 0.38), transparent 68%);
+}
+
+.dashboard-kpi-tile--users::after {
+  background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.3), transparent 68%);
+}
+
+.dashboard-kpi-tile--orders::after {
+  background: radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.28), transparent 68%);
+}
+
+.dashboard-kpi-tile--work::after {
+  background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.28), transparent 68%);
+}
+
+.dashboard-kpi-tile--paid::after {
+  background: radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.28), transparent 68%);
+}
+
+.dashboard-kpi-tile--reviews::after {
+  background: radial-gradient(circle at 30% 30%, rgba(168, 85, 247, 0.28), transparent 68%);
+}
+
+.dashboard-kpi-blob,
+.dashboard-kpi-eyebrow,
+.dashboard-kpi-metric,
+.dashboard-kpi-metric-row,
+.dashboard-kpi-note,
+.dashboard-kpi-unit {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-kpi-blob {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-kpi-blob--gold {
+  color: #fcd34d;
+  border-color: rgba(250, 204, 21, 0.28);
+  background: linear-gradient(145deg, rgba(250, 204, 21, 0.2), rgba(0, 0, 0, 0.22));
+}
+
+.dashboard-kpi-blob--sky {
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.32);
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.22), rgba(0, 0, 0, 0.2));
+}
+
+.dashboard-kpi-blob--cyan {
+  color: #67e8f9;
+  border-color: rgba(6, 182, 212, 0.3);
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.2), rgba(0, 0, 0, 0.2));
+}
+
+.dashboard-kpi-blob--amber {
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(0, 0, 0, 0.2));
+}
+
+.dashboard-kpi-blob--emerald {
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.3);
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.2), rgba(0, 0, 0, 0.2));
+}
+
+.dashboard-kpi-blob--violet {
+  color: #d8b4fe;
+  border-color: rgba(168, 85, 247, 0.3);
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.2), rgba(0, 0, 0, 0.2));
+}
+
+.dashboard-kpi-currency-glyph {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dashboard-kpi-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.dashboard-kpi-metric {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.dashboard-kpi-tile--revenue .dashboard-kpi-metric {
+  font-size: clamp(26px, 6.5vw, 34px);
+}
+
+.dashboard-kpi-metric-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard-kpi-unit {
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(252, 211, 77, 0.95);
+}
+
+.dashboard-kpi-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
 /* ----- Toolbar ----- */
 
 .toolbar {
@@ -2077,6 +2240,77 @@ select.app-input {
   color: #93c5fd;
 }
 
+.user-card-collapsed {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.user-card.is-open .order-card-expand {
+  max-height: min(75dvh, 640px);
+  opacity: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.user-card.is-open {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(59, 130, 246, 0.12);
+}
+
+.user-card-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.user-quick-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--border);
+}
+
+.user-quick-pill-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+
+.user-quick-pill--muted {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.user-card-expand-foot {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ----- Review cards (mobile) ----- */
 
 .reviews-mobile {
@@ -2342,6 +2576,50 @@ select.app-input {
   }
   .stat-value {
     font-size: 22px;
+  }
+
+  .dashboard-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "rev rev"
+      "users orders"
+      "work paid"
+      "reviews reviews";
+    gap: 10px;
+  }
+
+  .dashboard-kpi-tile {
+    min-height: 108px;
+    padding: 12px 12px 14px;
+  }
+
+  .dashboard-kpi-tile--revenue {
+    grid-area: rev;
+    min-height: 128px;
+  }
+
+  .dashboard-kpi-tile--users {
+    grid-area: users;
+  }
+
+  .dashboard-kpi-tile--orders {
+    grid-area: orders;
+  }
+
+  .dashboard-kpi-tile--work {
+    grid-area: work;
+  }
+
+  .dashboard-kpi-tile--paid {
+    grid-area: paid;
+  }
+
+  .dashboard-kpi-tile--reviews {
+    grid-area: reviews;
+  }
+
+  .dashboard-kpi-tile--revenue .dashboard-kpi-metric {
+    font-size: clamp(28px, 9vw, 38px);
   }
 
   /* Tables become cards on narrow screens */
