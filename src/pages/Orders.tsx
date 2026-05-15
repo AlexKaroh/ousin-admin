@@ -766,7 +766,7 @@ export default function OrdersPage() {
                 onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
                 onEdit={() => setEditing(order)}
                 onDelete={() => handleDelete(order)}
-                onOpenPhotoPicker={() => setPhotoPickerOrder(order)}
+
               />
             ))}
         </div>
@@ -1004,7 +1004,6 @@ function OrderMobileCard({
   onReject,
   onEdit,
   onDelete,
-  onOpenPhotoPicker,
 }: {
   order: AdminOrder;
   saving: boolean;
@@ -1016,7 +1015,6 @@ function OrderMobileCard({
   onReject: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onOpenPhotoPicker: () => void;
 }) {
   const tone = statusTone(order.request_status);
   const [swipeOpen, setSwipeOpen] = useState<"edit" | "delete" | null>(null);
