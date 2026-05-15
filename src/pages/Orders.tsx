@@ -1263,14 +1263,26 @@ function OrderMobileCard({
           ) : null}
 
           {heroHasPhoto ? (
-            <OrderMobileFieldRow
-              label="Фото (URL)"
-              value={
-                <span className="order-mobile-field-mono">{order.order_photo}</span>
-              }
-              copyText={order.order_photo}
-            />
-          ) : null}
+            <div className="order-listing-screenshot">
+              <div className="order-listing-screenshot__head">
+                <span className="order-info-label">Скрин с площадки</span>
+                <CopyTextButton
+                  text={order.order_photo}
+                  variant="icon"
+                  ariaLabel="Скопировать ссылку на изображение"
+                />
+              </div>
+              <a
+                href={order.order_photo}
+                target="_blank"
+                rel="noreferrer"
+                className="order-listing-screenshot__frame">
+                <img src={order.order_photo} alt="Скрин товара" loading="lazy" decoding="async" />
+              </a>
+            </div>
+          ) : (
+            <p className="order-listing-screenshot-empty muted">Скрин с площадки не приложен</p>
+          )}
 
           {order.comment ? (
             <div className="order-card-comment">
@@ -1446,7 +1458,7 @@ function EditOrderModal({
       <form id="edit-order-form" className="eo-form" onSubmit={handleSubmit}>
         <div className="eo-field">
           <label className="eo-label" htmlFor="eo-order-photo-url">
-            Фото товара
+            Скрин / фото товара
           </label>
           <div className="eo-photo-row">
             <div

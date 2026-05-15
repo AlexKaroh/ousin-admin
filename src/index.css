@@ -2548,6 +2548,49 @@ select.app-input {
   justify-content: flex-end;
 }
 
+.order-listing-screenshot {
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: #121214;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-listing-screenshot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.order-listing-screenshot__frame {
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0a0a0b;
+  max-height: min(52dvh, 420px);
+}
+
+.order-listing-screenshot__frame img {
+  display: block;
+  width: 100%;
+  max-height: min(52dvh, 420px);
+  object-fit: contain;
+  object-position: center top;
+}
+
+.order-listing-screenshot-empty {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
 /* ----- Review cards (mobile) ----- */
 
 .reviews-mobile {
