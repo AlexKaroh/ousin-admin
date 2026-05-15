@@ -1236,18 +1236,33 @@ function OrderMobileCard({
                 <p className="order-listing-screenshot-empty muted">Скрин с площадки не приложен</p>
               )}
 
+{order.order_url ? (
             <OrderMobileFieldRow
-              label="Тип доставки"
-              value={formatDeliveryTypeLabel(order.delivery_type)}
-              copyText={
-                parseDeliveryTypeKey(order.delivery_type) ?? order.delivery_type?.trim() ?? null
+              label="Ссылка на товар"
+              value={
+                <a
+                  className="order-mobile-field-link"
+                  href={order.order_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {formatOrderUrlDisplay(order.order_url)}
+                </a>
               }
+              copyText={order.order_url}
             />
-            <OrderMobileFieldRow
-              label="Оплачено"
-              value={order.is_paid ? "Да" : "Нет"}
-              copyText={order.is_paid ? "Да" : "Нет"}
-            />
+          ) : null}
+
+          {order.comment ? (
+            <div className="order-card-comment">
+              <div className="order-card-comment-head">
+                <span className="order-card-comment-label">Комментарий</span>
+                <CopyTextButton text={order.comment} variant="icon" ariaLabel="Скопировать комментарий" />
+              </div>
+              {order.comment}
+            </div>
+          ) : null}
           </div>
 
           <div className="order-card-info-grid">
@@ -1272,6 +1287,19 @@ function OrderMobileCard({
               <span className="order-info-value">{order.size ?? "—"}</span>
             </div>
           </div>
+
+          <OrderMobileFieldRow
+              label="Тип доставки"
+              value={formatDeliveryTypeLabel(order.delivery_type)}
+              copyText={
+                parseDeliveryTypeKey(order.delivery_type) ?? order.delivery_type?.trim() ?? null
+              }
+            />
+            <OrderMobileFieldRow
+              label="Оплачено"
+              value={order.is_paid ? "Да" : "Нет"}
+              copyText={order.is_paid ? "Да" : "Нет"}
+            />
 
           {order.user ? (
             <div className="order-mobile-field-row order-card-user-row">
@@ -1299,33 +1327,7 @@ function OrderMobileCard({
             </div>
           ) : null}
 
-          {order.order_url ? (
-            <OrderMobileFieldRow
-              label="Ссылка на товар"
-              value={
-                <a
-                  className="order-mobile-field-link"
-                  href={order.order_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {formatOrderUrlDisplay(order.order_url)}
-                </a>
-              }
-              copyText={order.order_url}
-            />
-          ) : null}
 
-          {order.comment ? (
-            <div className="order-card-comment">
-              <div className="order-card-comment-head">
-                <span className="order-card-comment-label">Комментарий</span>
-                <CopyTextButton text={order.comment} variant="icon" ariaLabel="Скопировать комментарий" />
-              </div>
-              {order.comment}
-            </div>
-          ) : null}
 
           <OrderMobileFieldRow label="ID заявки" value={order.id} copyText={order.id} />
 
@@ -1416,6 +1418,9 @@ function EditOrderModal({
     if (!Number.isFinite(priceNum) || priceNum <= 0) return "—";
     return `${formatBynHint(priceNum * CNY_TO_BYN_DISPLAY)} Br`;
   }, [priceNum]);
+
+  const productLinkTrimmed = orderUrl.trim();
+  const canOpenProductLink = /^https?:\/\//i.test(productLinkTrimmed);
 
   if (!order) return null;
 
@@ -1526,7 +1531,15 @@ function EditOrderModal({
         <div className="eo-field">
           <label className="eo-label">Ссылка на товар</label>
           <div className="eo-input-with-icon">
-            <LinkIcon className="eo-input-icon" size={16} />
+            <button
+              type="button"
+              className="eo-input-icon-btn"
+              disabled={!canOpenProductLink}
+              onClick={() => window.open(productLinkTrimmed, "_blank", "noopener,noreferrer")}
+              title={canOpenProductLink ? "Открыть ссылку в новой вкладке" : "Введите ссылку http(s)://…"}
+              aria-label="Открыть ссылку на товар">
+              <LinkIcon size={16} />
+            </button>
             <input
               value={orderUrl}
               onChange={(e) => setOrderUrl(e.target.value)}
