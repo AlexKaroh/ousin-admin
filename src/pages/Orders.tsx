@@ -1492,13 +1492,6 @@ function EditOrderModal({
               )}
             </div>
             <div className="eo-photo-actions">
-              <input
-                id="eo-order-photo-url"
-                value={orderPhoto}
-                onChange={(e) => setOrderPhoto(e.target.value)}
-                className="eo-input"
-                placeholder="URL изображения (https://…) или data:image/…"
-              />
               {onOpenPhotoPicker ? (
                 <button
                   type="button"
