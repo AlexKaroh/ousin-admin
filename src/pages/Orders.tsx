@@ -1203,26 +1203,41 @@ function OrderMobileCard({
 
       <div className="order-card-expand">
         <div className="order-card-expand-inner">
-          <button
-            type="button"
-            className="order-card-link order-card-image-action order-card-image-action--expand-top"
-            onClick={onOpenPhotoPicker}
-          >
-            <span>Фото товара…</span>
-          </button>
-
           <div className="order-mobile-copy-stack">
-            <OrderMobileFieldRow label="ID заявки" value={order.id} copyText={order.id} />
             <OrderMobileFieldRow
-              label="Название"
-              value={order.model?.trim() ? order.model : "—"}
-              copyText={order.model?.trim() ? order.model : null}
-            />
+                label="Название"
+                value={order.model?.trim() ? order.model : "—"}
+                copyText={order.model?.trim() ? order.model : null}
+              />
+
             <OrderMobileFieldRow
               label="Цена"
               value={`${order.price.toLocaleString("ru-RU")} ¥`}
               copyText={`${order.price} ¥`}
             />
+
+            {listingScreenshot ? (
+                <div className="order-listing-screenshot">
+                  <div className="order-listing-screenshot__head">
+                    <span className="order-info-label">Скрин с площадки</span>
+                    <CopyTextButton
+                      text={listingScreenshot}
+                      variant="icon"
+                      ariaLabel="Скопировать скрин с площадки"
+                    />
+                  </div>
+                  <a
+                    href={listingScreenshot}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="order-listing-screenshot__frame">
+                    <img src={listingScreenshot} alt="Скрин с площадки" loading="lazy" decoding="async" />
+                  </a>
+                </div>
+              ) : (
+                <p className="order-listing-screenshot-empty muted">Скрин с площадки не приложен</p>
+              )}
+
             <OrderMobileFieldRow
               label="Тип доставки"
               value={formatDeliveryTypeLabel(order.delivery_type)}
@@ -1304,28 +1319,6 @@ function OrderMobileCard({
             />
           ) : null}
 
-          {listingScreenshot ? (
-            <div className="order-listing-screenshot">
-              <div className="order-listing-screenshot__head">
-                <span className="order-info-label">Скрин с площадки</span>
-                <CopyTextButton
-                  text={listingScreenshot}
-                  variant="icon"
-                  ariaLabel="Скопировать скрин с площадки"
-                />
-              </div>
-              <a
-                href={listingScreenshot}
-                target="_blank"
-                rel="noreferrer"
-                className="order-listing-screenshot__frame">
-                <img src={listingScreenshot} alt="Скрин с площадки" loading="lazy" decoding="async" />
-              </a>
-            </div>
-          ) : (
-            <p className="order-listing-screenshot-empty muted">Скрин с площадки не приложен</p>
-          )}
-
           {order.comment ? (
             <div className="order-card-comment">
               <div className="order-card-comment-head">
@@ -1335,6 +1328,8 @@ function OrderMobileCard({
               {order.comment}
             </div>
           ) : null}
+
+          <OrderMobileFieldRow label="ID заявки" value={order.id} copyText={order.id} />
 
           <div className="order-card-foot">
             <div className="order-card-foot-date">
