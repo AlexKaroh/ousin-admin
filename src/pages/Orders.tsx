@@ -10,6 +10,12 @@ import {
   SearchIcon,
   TrashIcon,
 } from "../components/Icons";
+import {
+  DELIVERY_TYPE_OPTIONS,
+  formatDeliveryTypeLabel,
+  parseDeliveryTypeKey,
+  type DeliveryTypeKey,
+} from "../lib/deliveryType";
 
 type AdminOrderUser = {
   id: string;
@@ -70,8 +76,15 @@ const PAYMENT_OPTIONS = [
   { value: "paid", label: "Оплачен" },
 ] as const;
 
-/** Показ «итого в $» в модалке (как на референсе), без влияния на сохранение */
-const CNY_PER_USD_DISPLAY = 6.6;
+/** Подсказка «итого в BYN» в модалке — тот же курс, что в калькуляторе и уведомлениях бэка */
+const CNY_TO_BYN_DISPLAY = 1 / 2.15;
+
+function formatBynHint(value: number): string {
+  return value.toLocaleString("ru-RU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 function requestStatusBadgeText(status: string): string {
   const s = status.trim().toLowerCase();
@@ -137,6 +150,18 @@ function formatDate(iso: string) {
     });
   } catch {
     return iso;
+  }
+}
+
+function formatOrderUrlDisplay(url: string, maxLen = 52): string {
+  const raw = url.trim();
+  if (!raw) return "—";
+  try {
+    const u = new URL(raw);
+    const compact = `${u.hostname}${u.pathname}${u.search}`;
+    return compact.length > maxLen ? `${compact.slice(0, maxLen - 1)}…` : compact;
+  } catch {
+    return raw.length > maxLen ? `${raw.slice(0, maxLen - 1)}…` : raw;
   }
 }
 
@@ -764,7 +789,7 @@ export default function OrdersPage() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <div style={{ fontWeight: 700 }}>{order.model || "—"}</div>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          {order.delivery_type?.trim() ? order.delivery_type : "—"}
+                          {formatDeliveryTypeLabel(order.delivery_type)}
                         </div>
                         {order.order_url && (
                           <a
@@ -1179,8 +1204,10 @@ function OrderMobileCard({
             />
             <OrderMobileFieldRow
               label="Тип доставки"
-              value={order.delivery_type || "—"}
-              copyText={order.delivery_type?.trim() ? order.delivery_type : null}
+              value={formatDeliveryTypeLabel(order.delivery_type)}
+              copyText={
+                parseDeliveryTypeKey(order.delivery_type) ?? order.delivery_type?.trim() ?? null
+              }
             />
             <OrderMobileFieldRow
               label="Оплачено"
@@ -1212,9 +1239,9 @@ function OrderMobileCard({
             </div>
           </div>
 
-          {order.user && (
-            <>
-              <div className="order-card-user">
+          {order.user ? (
+            <div className="order-mobile-field-row order-card-user-row">
+              <div className="order-card-user order-card-user--in-row">
                 <div className="order-card-user-avatar">
                   {order.user.photo_url ? (
                     <img src={order.user.photo_url} alt="" />
@@ -1222,44 +1249,38 @@ function OrderMobileCard({
                     userInitial
                   )}
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="order-card-user-main">
+                  <span className="order-info-label">Клиент</span>
                   <div className="order-card-user-name">{userName}</div>
                   <div className="order-card-user-tg font-mono">
                     tg: {order.user.telegram_id}
                   </div>
                 </div>
               </div>
-              <div className="order-mobile-user-copy">
-                <CopyTextButton
-                  text={`${userName}\nTelegram ID: ${order.user.telegram_id}`}
-                  variant="row"
-                  rowLabel="Контакты"
-                  rowCopiedLabel="Скопировано"
-                  ariaLabel="Скопировать имя и Telegram ID"
-                />
-              </div>
-            </>
-          )}
-
-          {order.order_url ? (
-            <div className="order-mobile-link-block">
-              <a
-                className="order-card-link"
-                href={order.order_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <LinkIcon />
-                <span>Открыть товар</span>
-              </a>
               <CopyTextButton
-                text={order.order_url}
-                variant="row"
-                rowLabel="Ссылка"
-                rowCopiedLabel="Скопировано"
-                ariaLabel="Скопировать ссылку на товар"
+                text={`${userName ?? displayUserName}\nTelegram ID: ${order.user.telegram_id}`}
+                variant="icon"
+                ariaLabel="Скопировать контакты клиента"
               />
             </div>
+          ) : null}
+
+          {order.order_url ? (
+            <OrderMobileFieldRow
+              label="Ссылка на товар"
+              value={
+                <a
+                  className="order-mobile-field-link"
+                  href={order.order_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {formatOrderUrlDisplay(order.order_url)}
+                </a>
+              }
+              copyText={order.order_url}
+            />
           ) : null}
 
           {heroHasPhoto ? (
@@ -1339,7 +1360,7 @@ function EditOrderModal({
   const [orderPhoto, setOrderPhoto] = useState("");
   const [model, setModel] = useState("");
   const [orderUrl, setOrderUrl] = useState("");
-  const [deliveryType, setDeliveryType] = useState("");
+  const [deliveryTypeKey, setDeliveryTypeKey] = useState<DeliveryTypeKey | "">("");
   const [price, setPrice] = useState("");
   const [size, setSize] = useState("");
   const [requestStatus, setRequestStatus] = useState("");
@@ -1357,7 +1378,7 @@ function EditOrderModal({
     setOrderPhoto(order.order_photo || "");
     setModel(order.model || "");
     setOrderUrl(order.order_url || "");
-    setDeliveryType(order.delivery_type || "");
+    setDeliveryTypeKey(parseDeliveryTypeKey(order.delivery_type) ?? "");
     setPrice(String(order.price ?? ""));
     setSize(order.size == null ? "" : String(order.size));
     setRequestStatus(order.request_status || "");
@@ -1377,9 +1398,9 @@ function EditOrderModal({
     return Number.isFinite(n) ? n : NaN;
   }, [price]);
 
-  const totalUsdDisplay = useMemo(() => {
+  const totalBynDisplay = useMemo(() => {
     if (!Number.isFinite(priceNum) || priceNum <= 0) return "—";
-    return `$${Math.round(priceNum / CNY_PER_USD_DISPLAY)}`;
+    return `${formatBynHint(priceNum * CNY_TO_BYN_DISPLAY)} Br`;
   }, [priceNum]);
 
   if (!order) return null;
@@ -1394,7 +1415,7 @@ function EditOrderModal({
         order_photo: orderPhoto.trim(),
         model: model.trim(),
         order_url: orderUrl.trim(),
-        delivery_type: deliveryType.trim() === "" ? null : deliveryType.trim(),
+        delivery_type: deliveryTypeKey === "" ? null : deliveryTypeKey,
         request_status: requestStatus.trim(),
         order_status: status.trim(),
         payment_status: paymentStatus,
@@ -1515,24 +1536,38 @@ function EditOrderModal({
           />
         </div>
 
-        <div className="eo-two">
-          <div className="eo-field">
-            <label className="eo-label">Размер</label>
-            <input
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              className="eo-input"
-              inputMode="numeric"
-            />
-          </div>
-          <div className="eo-field">
-            <label className="eo-label">Тип доставки</label>
-            <input
-              value={deliveryType}
-              onChange={(e) => setDeliveryType(e.target.value)}
-              className="eo-input"
-              placeholder="Пусто — не задано"
-            />
+        <div className="eo-field">
+          <label className="eo-label">Размер</label>
+          <input
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            className="eo-input"
+            inputMode="numeric"
+          />
+        </div>
+
+        <div className="eo-field">
+          <label className="eo-label">Тип доставки</label>
+          <div className="eo-segment eo-segment--delivery" role="group" aria-label="Тип доставки">
+            <button
+              type="button"
+              className={`eo-segment-btn eo-segment-btn--delivery-none${deliveryTypeKey === "" ? " is-active" : ""}`}
+              onClick={() => setDeliveryTypeKey("")}
+              title="Не задано">
+              <span className="eo-segment-delivery-emoji">—</span>
+              <span className="eo-segment-delivery-label">Нет</span>
+            </button>
+            {DELIVERY_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`eo-segment-btn eo-segment-btn--delivery-${opt.value}${deliveryTypeKey === opt.value ? " is-active" : ""}`}
+                onClick={() => setDeliveryTypeKey(opt.value)}
+                title={opt.label}>
+                <span className="eo-segment-delivery-emoji">{opt.emoji}</span>
+                <span className="eo-segment-delivery-label">{opt.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -1559,10 +1594,10 @@ function EditOrderModal({
 
         <div className="eo-total-row">
           <span className="eo-label eo-label--inline">Итого (автоматически)</span>
-          <span className="eo-total-value">{totalUsdDisplay}</span>
+          <span className="eo-total-value">{totalBynDisplay}</span>
         </div>
         <p className="eo-hint">
-          Курс: {CNY_PER_USD_DISPLAY} ¥/$ · формула: цена ¥ / курс (только подсказка)
+          Курс: 1 ¥ ≈ {formatBynHint(CNY_TO_BYN_DISPLAY)} Br · формула: цена ¥ × курс (только подсказка)
         </p>
 
         <div className="eo-field">
