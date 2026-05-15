@@ -1254,6 +1254,13 @@ function OrderMobileCard({
             />
           ) : null}
 
+<div className="order-info-tile order-info-size" style={{ gridColumn: "1 / -1" }}>
+              <div className="order-info-tile-head">
+                <span className="order-info-label">Размер</span>
+              </div>
+              <span className="order-info-value">{order.size ?? "—"}</span>
+            </div>
+
           {order.comment ? (
             <div className="order-card-comment">
               <div className="order-card-comment-head">
@@ -1279,12 +1286,6 @@ function OrderMobileCard({
                 <span className="order-info-label">Статус внутри</span>
                 <div className="order-status-info__value">{order.order_status}</div>
               </div>
-            </div>
-            <div className="order-info-tile order-info-size" style={{ gridColumn: "1 / -1" }}>
-              <div className="order-info-tile-head">
-                <span className="order-info-label">Размер</span>
-              </div>
-              <span className="order-info-value">{order.size ?? "—"}</span>
             </div>
           </div>
 
