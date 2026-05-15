@@ -32,6 +32,7 @@ type AdminOrder = {
   user_id: string;
   user: AdminOrderUser | null;
   order_photo: string;
+  listing_screenshot: string | null;
   order_url: string;
   delivery_type: string | null;
   model: string;
@@ -176,6 +177,24 @@ const PAGE_SIZE = 20;
 function hasProductImage(orderPhoto: string | null | undefined) {
   const value = String(orderPhoto || "").trim();
   return Boolean(value) && !value.includes("order-no-product-photo");
+}
+
+/** Обложка — настраивает админ (order_photo). */
+function resolveCoverPhoto(order: Pick<AdminOrder, "order_photo">): string | null {
+  const photo = String(order.order_photo ?? "").trim();
+  return hasProductImage(photo) ? photo : null;
+}
+
+/** Скрин с маркетплейса — загружает клиент (listing_screenshot). */
+function resolveListingScreenshot(
+  order: Pick<AdminOrder, "listing_screenshot" | "order_photo">,
+): string | null {
+  const listing = String(order.listing_screenshot ?? "").trim();
+  if (listing) return listing;
+  const legacy = String(order.order_photo ?? "").trim();
+  if (!legacy || legacy.includes("order-no-product-photo")) return null;
+  if (/^data:image\//i.test(legacy)) return legacy;
+  return legacy;
 }
 
 const SUGGEST_PHOTO_CAP = 5;
@@ -1020,7 +1039,9 @@ function OrderMobileCard({
     requestNorm === "завершена" || requestNorm === "исполнена" || requestNorm === "отклонена";
   const showReject = requestNorm === "новые";
   const heroActionTwoCol = !primaryTerminal && showReject;
-  const heroHasPhoto = hasProductImage(order.order_photo);
+  const coverPhoto = resolveCoverPhoto(order);
+  const listingScreenshot = resolveListingScreenshot(order);
+  const heroHasPhoto = Boolean(coverPhoto);
   const openedOffset = swipeOpen === "edit" ? 82 : swipeOpen === "delete" ? -82 : 0;
   const swipeX = dragStart ? dragOffset : openedOffset;
 
@@ -1175,7 +1196,7 @@ function OrderMobileCard({
         </div>
         {heroHasPhoto ? (
           <div className="order-card-hero-thumb">
-            <img src={order.order_photo ?? ""} alt="" loading="lazy" decoding="async" />
+            <img src={coverPhoto ?? ""} alt="" loading="lazy" decoding="async" />
           </div>
         ) : null}
       </div>
@@ -1283,22 +1304,22 @@ function OrderMobileCard({
             />
           ) : null}
 
-          {heroHasPhoto ? (
+          {listingScreenshot ? (
             <div className="order-listing-screenshot">
               <div className="order-listing-screenshot__head">
                 <span className="order-info-label">Скрин с площадки</span>
                 <CopyTextButton
-                  text={order.order_photo}
+                  text={listingScreenshot}
                   variant="icon"
-                  ariaLabel="Скопировать ссылку на изображение"
+                  ariaLabel="Скопировать скрин с площадки"
                 />
               </div>
               <a
-                href={order.order_photo}
+                href={listingScreenshot}
                 target="_blank"
                 rel="noreferrer"
                 className="order-listing-screenshot__frame">
-                <img src={order.order_photo} alt="Скрин товара" loading="lazy" decoding="async" />
+                <img src={listingScreenshot} alt="Скрин с площадки" loading="lazy" decoding="async" />
               </a>
             </div>
           ) : (
@@ -1479,8 +1500,11 @@ function EditOrderModal({
       <form id="edit-order-form" className="eo-form" onSubmit={handleSubmit}>
         <div className="eo-field">
           <label className="eo-label" htmlFor="eo-order-photo-url">
-            Скрин / фото товара
+            Обложка (фото товара)
           </label>
+          <p className="eo-hint">
+            Подбирается менеджером. Скрин карточки с маркетплейса клиент прикрепляет сам при оформлении.
+          </p>
           <div className="eo-photo-row">
             <div
               className={`eo-photo-thumb${hasProductImage(orderPhoto) ? "" : " eo-photo-thumb--empty"}`}
