@@ -87,6 +87,21 @@ function formatBynHint(value: number): string {
   });
 }
 
+/** Итого в Br: целое число (50,1 → 50; 50,4 → 51). */
+function roundBynTotal(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const n = Math.max(0, value);
+  const whole = Math.trunc(n);
+  const frac = n - whole;
+  return frac >= 0.4 ? whole + 1 : whole;
+}
+
+function formatBynTotalRounded(value: number): string {
+  return roundBynTotal(value).toLocaleString("ru-RU", {
+    maximumFractionDigits: 0,
+  });
+}
+
 function requestStatusBadgeText(status: string): string {
   const s = status.trim().toLowerCase();
   if (s === "новые") return "НОВАЯ";
@@ -1417,7 +1432,7 @@ function EditOrderModal({
 
   const totalBynDisplay = useMemo(() => {
     if (!Number.isFinite(priceNum) || priceNum <= 0) return "—";
-    return `${formatBynHint(priceNum * CNY_TO_BYN_DISPLAY)} Br`;
+    return `${formatBynTotalRounded(priceNum * CNY_TO_BYN_DISPLAY)} Br`;
   }, [priceNum]);
 
   const productLinkTrimmed = orderUrl.trim();
