@@ -7,7 +7,8 @@ type Tier = { min: number; max: number; rate: number };
 type LoadResponse = {
   tiers: Tier[];
   vatOnCommissionRate: number;
-  defaults: { tiers: Tier[]; vatOnCommissionRate: number };
+  usdToBynRate: number;
+  defaults: { tiers: Tier[]; vatOnCommissionRate: number; usdToBynRate: number };
   updated_at: string | null;
   stored: boolean;
 };
@@ -30,6 +31,7 @@ function tiersToRows(tiers: Tier[]): Row[] {
 export default function CalculatorCommissionPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [vatPct, setVatPct] = useState("20");
+  const [usdToByn, setUsdToByn] = useState("3.2");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [stored, setStored] = useState(false);
   const [defaults, setDefaults] = useState<LoadResponse["defaults"] | null>(null);
@@ -45,6 +47,7 @@ export default function CalculatorCommissionPage() {
       const data = await apiFetch<LoadResponse>("/admin/settings/calculator-commission");
       setRows(tiersToRows(data.tiers));
       setVatPct(String(Math.round(data.vatOnCommissionRate * 10000) / 100));
+      setUsdToByn(String(data.usdToBynRate ?? data.defaults.usdToBynRate ?? 3.2));
       setUpdatedAt(data.updated_at);
       setStored(data.stored);
       setDefaults(data.defaults);
@@ -79,6 +82,7 @@ export default function CalculatorCommissionPage() {
     if (!defaults) return;
     setRows(tiersToRows(defaults.tiers));
     setVatPct(String(Math.round(defaults.vatOnCommissionRate * 10000) / 100));
+    setUsdToByn(String(defaults.usdToBynRate ?? 3.2));
   }
 
   async function save() {
@@ -88,6 +92,12 @@ export default function CalculatorCommissionPage() {
     const vat = numOrZero(vatPct) / 100;
     if (vat < 0 || vat > 1) {
       setError("НДС на комиссию: введите процент от 0 до 100");
+      setSaving(false);
+      return;
+    }
+    const usdRate = numOrZero(usdToByn);
+    if (usdRate <= 0) {
+      setError("Курс доллара: введите положительное число");
       setSaving(false);
       return;
     }
@@ -112,7 +122,7 @@ export default function CalculatorCommissionPage() {
     try {
       await apiFetch<LoadResponse>("/admin/settings/calculator-commission", {
         method: "PATCH",
-        body: { tiers, vatOnCommissionRate: vat },
+        body: { tiers, vatOnCommissionRate: vat, usdToBynRate: usdRate },
       });
       setOk("Сохранено");
       await load();
@@ -150,6 +160,20 @@ export default function CalculatorCommissionPage() {
               inputMode="decimal"
               style={{ maxWidth: 160 }}
             />
+          </div>
+
+          <div className="eo-field" style={{ marginBottom: 16 }}>
+            <label className="eo-label">Курс доллара ($ → Br)</label>
+            <input
+              className="app-input"
+              value={usdToByn}
+              onChange={(e) => setUsdToByn(e.target.value)}
+              inputMode="decimal"
+              style={{ maxWidth: 160 }}
+            />
+            <p className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+              Используется в калькуляторе доставки мини-приложения для перевода USD в белорусские рубли.
+            </p>
           </div>
 
           <div style={{ marginBottom: 8, fontWeight: 700 }}>Пороги: мин ¥ — макс ¥ — ставка комиссии, %</div>

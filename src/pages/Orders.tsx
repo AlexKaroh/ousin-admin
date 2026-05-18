@@ -77,29 +77,13 @@ const PAYMENT_OPTIONS = [
   { value: "paid", label: "Оплачен" },
 ] as const;
 
-/** Подсказка «итого в BYN» в модалке — тот же курс, что в калькуляторе и уведомлениях бэка */
-const CNY_TO_BYN_DISPLAY = 1 / 2.15;
-
-function formatBynHint(value: number): string {
-  return value.toLocaleString("ru-RU", {
+/** Цена в БД — Br с комиссией (сохраняется бэкендом из ¥). */
+function formatOrderPriceByn(price: number): string {
+  if (!Number.isFinite(price)) return "—";
+  return `${price.toLocaleString("ru-RU", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-}
-
-/** Итого в Br: целое число (50,1 → 50; 50,4 → 51). */
-function roundBynTotal(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  const n = Math.max(0, value);
-  const whole = Math.trunc(n);
-  const frac = n - whole;
-  return frac >= 0.4 ? whole + 1 : whole;
-}
-
-function formatBynTotalRounded(value: number): string {
-  return roundBynTotal(value).toLocaleString("ru-RU", {
-    maximumFractionDigits: 0,
-  });
+  })} Br`;
 }
 
 function requestStatusBadgeText(status: string): string {
@@ -861,7 +845,7 @@ export default function OrdersPage() {
                         </div>
                       )}
                     </td>
-                    <td data-label="Цена">{order.price.toLocaleString("ru-RU")} ¥</td>
+                    <td data-label="Цена">{formatOrderPriceByn(order.price)}</td>
                     <td data-label="Трек CN" className="font-mono muted" style={{ fontSize: 12 }}>
                       {order.china_code?.trim() || "—"}
                     </td>
@@ -1149,7 +1133,7 @@ function OrderMobileCard({
             <span className="order-card-hero-user-name">{displayUserName}</span>
           </div>
           <div className="order-card-hero-price-row">
-            <span className="order-card-hero-price">{order.price.toLocaleString("ru-RU")} ¥</span>
+            <span className="order-card-hero-price">{formatOrderPriceByn(order.price)}</span>
             {order.size != null ? (
               <span className="order-card-hero-size">Размер: {order.size}</span>
             ) : null}
@@ -1218,15 +1202,15 @@ function OrderMobileCard({
         <div className="order-card-expand-inner">
           <div className="order-mobile-copy-stack">
             <OrderMobileFieldRow
-                label="Название"
+                label="Название"Кар
                 value={order.model?.trim() ? order.model : "—"}
                 copyText={order.model?.trim() ? order.model : null}
               />
 
             <OrderMobileFieldRow
               label="Цена"
-              value={`${order.price.toLocaleString("ru-RU")} ¥`}
-              copyText={`${order.price} ¥`}
+              value={formatOrderPriceByn(order.price)}
+              copyText={`${order.price} Br`}
             />
 
             {listingScreenshot ? (
@@ -1425,16 +1409,6 @@ function EditOrderModal({
     setError("");
   }, [order]);
 
-  const priceNum = useMemo(() => {
-    const n = Number(String(price).replace(",", ".").trim());
-    return Number.isFinite(n) ? n : NaN;
-  }, [price]);
-
-  const totalBynDisplay = useMemo(() => {
-    if (!Number.isFinite(priceNum) || priceNum <= 0) return "—";
-    return `${formatBynTotalRounded(priceNum * CNY_TO_BYN_DISPLAY)} Br`;
-  }, [priceNum]);
-
   const productLinkTrimmed = orderUrl.trim();
   const canOpenProductLink = /^https?:\/\//i.test(productLinkTrimmed);
 
@@ -1622,7 +1596,7 @@ function EditOrderModal({
         </div>
 
         <div className="eo-field">
-          <label className="eo-label">Цена в юанях (¥)</label>
+          <label className="eo-label">Цена (Br, с комиссией)</label>
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
@@ -1630,13 +1604,8 @@ function EditOrderModal({
             inputMode="decimal"
           />
         </div>
-
-        <div className="eo-total-row">
-          <span className="eo-label eo-label--inline">Итого (автоматически)</span>
-          <span className="eo-total-value">{totalBynDisplay}</span>
-        </div>
         <p className="eo-hint">
-          Курс: 1 ¥ ≈ {formatBynHint(CNY_TO_BYN_DISPLAY)} Br · формула: цена ¥ × курс (только подсказка)
+          В заявках с мини-приложения цена считается на бэкенде: ¥ + комиссия + НДС, курс 1 ¥ ≈ 0,47 Br.
         </p>
 
         <div className="eo-field">
