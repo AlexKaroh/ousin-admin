@@ -1202,7 +1202,7 @@ function OrderMobileCard({
         <div className="order-card-expand-inner">
           <div className="order-mobile-copy-stack">
             <OrderMobileFieldRow
-                label="Название"Кар
+                label="Название"
                 value={order.model?.trim() ? order.model : "—"}
                 copyText={order.model?.trim() ? order.model : null}
               />
