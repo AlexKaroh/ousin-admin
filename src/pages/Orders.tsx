@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch, ApiError } from "../api";
 import Modal from "../components/Modal";
@@ -16,6 +16,7 @@ import {
   parseDeliveryTypeKey,
   type DeliveryTypeKey,
 } from "../lib/deliveryType";
+import { buildAdminOrderGroups } from "../lib/orderGroups";
 
 type AdminOrderUser = {
   id: string;
@@ -38,6 +39,8 @@ type AdminOrder = {
   model: string;
   size: number | null;
   price: number;
+  order_group_id: string | null;
+  position_in_group: number | null;
   comment: string | null;
   china_code: string | null;
   payment_status: string;
@@ -667,6 +670,11 @@ export default function OrdersPage() {
     return Math.max(1, Math.ceil(data.total / PAGE_SIZE));
   }, [data]);
 
+  const orderGroups = useMemo(
+    () => (data?.items ? buildAdminOrderGroups(data.items) : []),
+    [data?.items],
+  );
+
   return (
     <>
       <PageHeader
@@ -750,24 +758,85 @@ export default function OrdersPage() {
             </div>
           )}
           {!loading &&
-            data?.items.map((order) => (
-              <OrderMobileCard
-                key={order.id}
-                order={order}
-                saving={savingId === order.id}
-                deleting={deletingId === order.id}
-                expanded={expandedMobileOrderId === order.id}
-                onToggleExpand={() =>
-                  setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
-                }
-                onAccept={() => handleQuickStatus(order, "Принята", order.order_status)}
-                onComplete={() => handleQuickStatus(order, "Завершена", order.order_status)}
-                onReject={() => handleQuickStatus(order, "Отклонена", order.order_status)}
-                onEdit={() => setEditing(order)}
-                onDelete={() => handleDelete(order)}
-
-              />
-            ))}
+            orderGroups.map((group) =>
+              group.items_count === 1 ? (
+                <OrderMobileCard
+                  key={group.group_id}
+                  order={group.orders[0]}
+                  saving={savingId === group.orders[0].id}
+                  deleting={deletingId === group.orders[0].id}
+                  expanded={expandedMobileOrderId === group.orders[0].id}
+                  onToggleExpand={() =>
+                    setExpandedMobileOrderId((prev) =>
+                      prev === group.orders[0].id ? null : group.orders[0].id,
+                    )
+                  }
+                  onAccept={() =>
+                    handleQuickStatus(group.orders[0], "Принята", group.orders[0].order_status)
+                  }
+                  onComplete={() =>
+                    handleQuickStatus(group.orders[0], "Завершена", group.orders[0].order_status)
+                  }
+                  onReject={() =>
+                    handleQuickStatus(group.orders[0], "Отклонена", group.orders[0].order_status)
+                  }
+                  onEdit={() => setEditing(group.orders[0])}
+                  onDelete={() => handleDelete(group.orders[0])}
+                />
+              ) : (
+                <div key={group.group_id} className="order-stack-group app-card card-padded">
+                  <div
+                    className="order-stack-group__head"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 10,
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      className="order-stack-group__badge"
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        color: "var(--primary, #4f46e5)",
+                      }}
+                    >
+                      Стопка · {group.items_count} поз.
+                    </span>
+                    <span className="order-stack-group__total" style={{ fontWeight: 800 }}>
+                      {formatOrderPriceByn(group.total_price)}
+                    </span>
+                  </div>
+                  <div className="order-stack-group__items">
+                    {group.orders.map((order) => (
+                      <OrderMobileCard
+                        key={order.id}
+                        order={order}
+                        saving={savingId === order.id}
+                        deleting={deletingId === order.id}
+                        expanded={expandedMobileOrderId === order.id}
+                        onToggleExpand={() =>
+                          setExpandedMobileOrderId((prev) => (prev === order.id ? null : order.id))
+                        }
+                        onAccept={() => handleQuickStatus(order, "Принята", order.order_status)}
+                        onComplete={() =>
+                          handleQuickStatus(order, "Завершена", order.order_status)
+                        }
+                        onReject={() =>
+                          handleQuickStatus(order, "Отклонена", order.order_status)
+                        }
+                        onEdit={() => setEditing(order)}
+                        onDelete={() => handleDelete(order)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ),
+            )}
         </div>
         <div className="table-scroll">
           <table className="app-table">
@@ -801,7 +870,17 @@ export default function OrdersPage() {
                 </tr>
               )}
               {!loading &&
-                data?.items.map((order) => (
+                orderGroups.map((group) => (
+                  <Fragment key={group.group_id}>
+                    {group.items_count > 1 ? (
+                      <tr className="order-group-summary-row">
+                        <td colSpan={10} style={{ fontWeight: 700, background: "var(--surface-2, #f8fafc)" }}>
+                          Стопка · {group.items_count} поз. · Итого{" "}
+                          {formatOrderPriceByn(group.total_price)}
+                        </td>
+                      </tr>
+                    ) : null}
+                    {group.orders.map((order) => (
                   <tr key={order.id}>
                     <td data-label="Товар" data-mobile="full">
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -928,6 +1007,8 @@ export default function OrdersPage() {
                       </div>
                     </td>
                   </tr>
+                    ))}
+                  </Fragment>
                 ))}
             </tbody>
           </table>
