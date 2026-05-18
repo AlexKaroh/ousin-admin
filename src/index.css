@@ -3603,3 +3603,9 @@ select.app-input {
 .eo-footer-btn--primary:disabled {
   opacity: 0.5;
 }
+
+.order-stack-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
