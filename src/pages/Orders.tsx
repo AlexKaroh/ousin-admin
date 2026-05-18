@@ -805,7 +805,7 @@ export default function OrdersPage() {
                         color: "var(--primary, #4f46e5)",
                       }}
                     >
-                      Стопка · {group.items_count} поз.
+                      · {group.items_count} поз.
                     </span>
                     <span className="order-stack-group__total" style={{ fontWeight: 800 }}>
                       {formatOrderPriceByn(group.total_price)}
